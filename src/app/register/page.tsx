@@ -100,12 +100,13 @@ export default function RegisterPage() {
   };
 
   const handleOAuthLogin = async (provider: "google" | "facebook") => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          skipBrowserRedirect: true,
+          // Redirect back to our callback which will set the session and forward to /dashboard
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent('/dashboard')}`,
         },
       });
 
@@ -115,54 +116,16 @@ export default function RegisterPage() {
           description: error.message,
           variant: "destructive",
         });
-        return;
       }
-
-      if (data?.url) {
-        // Open OAuth in popup window
-        const width = 500;
-        const height = 600;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-        
-        const popup = window.open(
-          data.url,
-          'oauth-popup',
-          `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-        );
-
-        // Listen for success message from popup
-        const messageHandler = (event: MessageEvent) => {
-          if (event.origin === window.location.origin && event.data?.type === 'oauth-success') {
-            window.removeEventListener('message', messageHandler);
-            router.push('/dashboard');
-            router.refresh();
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-
-        // Fallback: Check popup status
-        const checkPopup = setInterval(() => {
-          if (!popup || popup.closed) {
-            clearInterval(checkPopup);
-            window.removeEventListener('message', messageHandler);
-            // Check if user is now authenticated
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (session) {
-                router.push('/dashboard');
-                router.refresh();
-              }
-            });
-          }
-        }, 500);
-      }
+      // Full-page redirect will handle the rest
     } catch (error) {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 

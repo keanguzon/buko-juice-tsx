@@ -56,14 +56,13 @@ export default function LoginPage() {
   };
 
   const handleOAuthLogin = async (provider: "google" | "facebook") => {
+    setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(
-            redirectTo
-          )}&popup=1`,
-          skipBrowserRedirect: true,
+          // Use a full-page redirect instead of a popup
+          redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(redirectTo)}`,
         },
       });
 
@@ -73,95 +72,16 @@ export default function LoginPage() {
           description: error.message,
           variant: "destructive",
         });
-        return;
       }
-
-      if (data?.url) {
-        // Open OAuth in popup window
-        const width = 500;
-        const height = 600;
-        const left = window.screen.width / 2 - width / 2;
-        const top = window.screen.height / 2 - height / 2;
-        
-        const popup = window.open(
-          data.url,
-          'oauth-popup',
-          `width=${width},height=${height},left=${left},top=${top},toolbar=no,menubar=no,scrollbars=yes,resizable=yes`
-        );
-
-        if (!popup) {
-          toast({
-            title: "Popup blocked",
-            description: "Please allow popups for this site and try again.",
-            variant: "destructive",
-          });
-          return;
-        }
-
-        // Listen for success message from popup
-        const messageHandler = (event: MessageEvent) => {
-          if (event.origin !== window.location.origin) return;
-
-          if (event.data?.type === 'oauth-success') {
-            window.removeEventListener('message', messageHandler);
-            try {
-              if (!popup.closed) popup.close();
-            } catch {}
-
-            const target = typeof event.data?.redirect === "string" ? event.data.redirect : redirectTo;
-            router.push(target);
-            router.refresh();
-          }
-
-          if (event.data?.type === 'oauth-error') {
-            window.removeEventListener('message', messageHandler);
-            try {
-              if (!popup.closed) popup.close();
-            } catch {}
-
-            toast({
-              title: "Sign in failed",
-              description: event.data?.message || "OAuth sign in failed",
-              variant: "destructive",
-            });
-          }
-        };
-        
-        window.addEventListener('message', messageHandler);
-
-        // Fallback: Check popup status
-        const checkPopup = setInterval(() => {
-          if (!popup || popup.closed) {
-            clearInterval(checkPopup);
-            window.removeEventListener('message', messageHandler);
-            // Check if user is now authenticated
-            supabase.auth.getSession().then(({ data: { session } }) => {
-              if (session) {
-                router.push(redirectTo);
-                router.refresh();
-              }
-            });
-          }
-        }, 500);
-
-        // If we receive a message, stop polling.
-        const originalHandler = messageHandler;
-        const wrappedHandler = (event: MessageEvent) => {
-          if (event.origin === window.location.origin && (event.data?.type === 'oauth-success' || event.data?.type === 'oauth-error')) {
-            clearInterval(checkPopup);
-          }
-          originalHandler(event);
-        };
-
-        window.removeEventListener('message', messageHandler);
-        window.addEventListener('message', wrappedHandler);
-      }
+      // The browser will be redirected to the provider; no popup handling required
     } catch (error) {
       toast({
         title: "Error",
         description: "An unexpected error occurred",
         variant: "destructive",
       });
+    } finally {
+      setIsLoading(false);
     }
   };
 
