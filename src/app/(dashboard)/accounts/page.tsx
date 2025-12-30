@@ -44,10 +44,12 @@ export default async function AccountsPage() {
             Manage your financial accounts
           </p>
         </div>
-        <Button>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Account
-        </Button>
+        <a href="/accounts/new">
+          <Button>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Account
+          </Button>
+        </a>
       </div>
 
       {/* Total Balance Card */}
@@ -74,14 +76,12 @@ export default async function AccountsPage() {
                   <CardTitle className="text-sm font-medium">
                     {account.name}
                   </CardTitle>
-                  <div
-                    className="p-2 rounded-full"
-                    style={{ backgroundColor: `${account.color}20` }}
-                  >
-                    <Icon
-                      className="h-4 w-4"
-                      style={{ color: account.color || "#22c55e" }}
-                    />
+                  <div className="p-2 rounded-full" style={{ backgroundColor: `${account.color}20` }}>
+                    {account.type === 'e_wallet' && account.icon ? (
+                      <img src={`/logos/${account.icon}`} alt={account.name} className="h-5 w-5" />
+                    ) : (
+                      <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent>
@@ -103,10 +103,12 @@ export default async function AccountsPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Add your first account to start tracking
               </p>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Account
-              </Button>
+              <a href="/accounts/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Account
+                </Button>
+              </a>
             </CardContent>
           </Card>
         )}
