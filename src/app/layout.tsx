@@ -29,7 +29,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          <div className="min-h-screen animate-fade-in">{children}</div>
           <Toaster />
         </ThemeProvider>
       </body>

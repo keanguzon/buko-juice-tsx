@@ -58,7 +58,15 @@ export function Header({ user }: HeaderProps) {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          onClick={() => {
+            try {
+              document.documentElement.classList.add("theme-transition");
+              setTheme(theme === "dark" ? "light" : "dark");
+              setTimeout(() => document.documentElement.classList.remove("theme-transition"), 350);
+            } catch (e) {
+              setTheme(theme === "dark" ? "light" : "dark");
+            }
+          }}
         >
           <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
           <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
