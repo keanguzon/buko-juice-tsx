@@ -32,10 +32,12 @@ export default async function TransactionsPage() {
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Transaction
-          </Button>
+          <a href="/transactions/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Add Transaction
+            </Button>
+          </a>
         </div>
       </div>
 
@@ -108,10 +110,12 @@ export default async function TransactionsPage() {
               <p className="text-sm text-muted-foreground mb-4">
                 Start tracking by adding your first transaction
               </p>
-              <Button>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Transaction
-              </Button>
+              <a href="/transactions/new">
+                <Button>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </Button>
+              </a>
             </div>
           )}
         </CardContent>
