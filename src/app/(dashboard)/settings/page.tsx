@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { User, Upload, Loader2, Palette, Shield } from "lucide-react";
+import { User, Upload, Loader2, DollarSign, Shield } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -247,7 +247,7 @@ export default function SettingsPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Palette className="h-5 w-5" />
+              <DollarSign className="h-5 w-5" />
               Currency
             </CardTitle>
             <CardDescription>Select your preferred currency</CardDescription>
@@ -257,7 +257,7 @@ export default function SettingsPage() {
               <Label htmlFor="currency">Default Currency</Label>
               <select
                 id="currency"
-                className="w-full md:w-64 px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
+                className="w-full px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
                 defaultValue="PHP"
               >
                 <option value="PHP">PHP - Philippine Peso</option>
