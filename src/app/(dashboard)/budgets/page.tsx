@@ -34,7 +34,7 @@ export default async function BudgetsPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {budgets && budgets.length > 0 ? (
-          budgets.map((budget) => {
+          budgets.map((budget: any) => {
             // TODO: Calculate spent amount from transactions
             const spent = 0;
             const progress = (spent / Number(budget.amount)) * 100;
