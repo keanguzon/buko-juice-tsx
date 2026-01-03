@@ -3,6 +3,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Plus, Tags, ArrowDownLeft, ArrowUpRight } from "lucide-react";
 
+type Category = {
+  id: string;
+  name: string;
+  type: string;
+  color?: string;
+  icon?: string;
+  is_default?: boolean;
+  user_id?: string;
+  created_at?: string;
+};
+
 export default async function CategoriesPage() {
   const supabase = createClient();
 
@@ -16,8 +27,8 @@ export default async function CategoriesPage() {
     .or(`user_id.eq.${session?.user.id},is_default.eq.true`)
     .order("name");
 
-  const incomeCategories = categories?.filter((c) => c.type === "income") || [];
-  const expenseCategories = categories?.filter((c) => c.type === "expense") || [];
+  const incomeCategories = (categories as Category[])?.filter((c) => c.type === "income") || [];
+  const expenseCategories = (categories as Category[])?.filter((c) => c.type === "expense") || [];
 
   return (
     <div className="space-y-6">
