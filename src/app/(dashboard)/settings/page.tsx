@@ -39,10 +39,11 @@ export default function SettingsPage() {
           .single();
         
         if (data) {
-          setProfile(data);
-          setName(data.name || "");
-          setUsername(data.username || "");
-          setAvatarUrl(data.avatar_url || "");
+          const profileRow = data as any;
+          setProfile(profileRow);
+          setName(profileRow.name || "");
+          setUsername(profileRow.username || "");
+          setAvatarUrl(profileRow.avatar_url || "");
         }
       }
     } catch (error) {
@@ -85,7 +86,7 @@ export default function SettingsPage() {
         .from("profiles")
         .getPublicUrl(filePath);
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await (supabase as any)
         .from("users")
         .update({ avatar_url: publicUrl })
         .eq("id", session.user.id);
@@ -116,7 +117,7 @@ export default function SettingsPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from("users")
         .update({
           name,

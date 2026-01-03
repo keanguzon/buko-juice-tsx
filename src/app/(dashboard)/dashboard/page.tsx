@@ -18,48 +18,58 @@ export default async function DashboardPage() {
   } = await supabase.auth.getSession();
 
   // Get accounts
-  const { data: accounts } = await supabase
+  const { data: accountsData } = await supabase
     .from("accounts")
     .select("*")
     .eq("user_id", session?.user.id || "")
     .eq("is_active", true);
 
+  const accounts = (accountsData ?? []) as any[];
+
   // Get recent transactions
-  const { data: transactions } = await supabase
+  const { data: transactionsData } = await supabase
     .from("transactions")
     .select("*, category:categories(*), account:accounts(*)")
     .eq("user_id", session?.user.id || "")
     .order("date", { ascending: false })
     .limit(5);
 
+  const transactions = (transactionsData ?? []) as any[];
+
   // Get goals
-  const { data: goals } = await supabase
+  const { data: goalsData } = await supabase
     .from("goals")
     .select("*")
     .eq("user_id", session?.user.id || "")
     .eq("is_completed", false)
     .limit(3);
 
+  const goals = (goalsData ?? []) as any[];
+
   // Calculate totals
-  const totalBalance = accounts?.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   
   // Calculate this month's income/expenses
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
   
-  const { data: monthTransactions } = await supabase
+  const { data: monthTransactionsData } = await supabase
     .from("transactions")
     .select("type, amount")
     .eq("user_id", session?.user.id || "")
     .gte("date", startOfMonth);
 
-  const monthlyIncome = monthTransactions
-    ?.filter((t) => t.type === "income")
-    .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+  const monthTransactions = (monthTransactionsData ?? []) as any[];
 
-  const monthlyExpenses = monthTransactions
-    ?.filter((t) => t.type === "expense")
-    .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+  const monthlyIncome =
+    monthTransactions
+      .filter((t) => t.type === "income")
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
+
+  const monthlyExpenses =
+    monthTransactions
+      .filter((t) => t.type === "expense")
+      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
 
   const statCards = [
     {
