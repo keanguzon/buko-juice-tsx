@@ -11,14 +11,16 @@ export default async function GoalsPage() {
     data: { session },
   } = await supabase.auth.getSession();
 
-  const { data: goals } = await supabase
+  const { data: goalsData } = await supabase
     .from("goals")
     .select("*")
     .eq("user_id", session?.user.id || "")
     .order("created_at", { ascending: false });
 
-  const activeGoals = goals?.filter((g) => !g.is_completed) || [];
-  const completedGoals = goals?.filter((g) => g.is_completed) || [];
+  const goals = (goalsData ?? []) as any[];
+
+  const activeGoals = goals.filter((g) => !g.is_completed);
+  const completedGoals = goals.filter((g) => g.is_completed);
 
   return (
     <div className="space-y-6">

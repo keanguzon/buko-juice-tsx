@@ -36,7 +36,7 @@ export default function AddAccountForm() {
         return;
       }
 
-      const { error } = await supabase.from("accounts").insert({
+      const { error } = await (supabase as any).from("accounts").insert({
         user_id: session.user.id,
         name,
         type,

@@ -9,6 +9,7 @@ import { useToast } from "@/components/ui/use-toast";
 
 export default function AddTransactionForm() {
   const supabase = createClient();
+  const sb = supabase as any;
   const router = useRouter();
   const { toast } = useToast();
 
@@ -29,14 +30,16 @@ export default function AddTransactionForm() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user?.id) return;
 
-      const { data: accounts } = await supabase.from("accounts").select("*").eq("user_id", session.user.id).order("name");
-      setAccounts(accounts || []);
+      const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
+      const accountsList = (accountsData ?? []) as any[];
+      setAccounts(accountsList);
 
-      const { data: cats } = await supabase.from("categories").select("*").order("name");
-      setCategories(cats || []);
+      const { data: catsData } = await sb.from("categories").select("*").order("name");
+      const catsList = (catsData ?? []) as any[];
+      setCategories(catsList);
 
-      if ((accounts || []).length > 0) setAccountId(accounts[0].id);
-      if ((cats || []).length > 0) setCategoryId(cats[0].id);
+      if (accountsList.length > 0) setAccountId(accountsList[0]?.id ?? "");
+      if (catsList.length > 0) setCategoryId(catsList[0]?.id ?? "");
     };
 
     load();
@@ -60,7 +63,7 @@ export default function AddTransactionForm() {
       }
 
       // Insert transaction
-      const { error, data: inserted } = await supabase.from("transactions").insert({
+      const { error, data: inserted } = await sb.from("transactions").insert({
         user_id: session.user.id,
         account_id: accountId,
         category_id: categoryId || null,
@@ -78,22 +81,22 @@ export default function AddTransactionForm() {
 
       // Update balances
       if (type === "income") {
-        const { data: acc } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc.balance || 0) + amt;
-        await supabase.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
+        const newBal = Number(acc?.balance || 0) + amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
       } else if (type === "expense") {
-        const { data: acc } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc.balance || 0) - amt;
-        await supabase.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
+        const newBal = Number(acc?.balance || 0) - amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
       } else if (type === "transfer") {
         // subtract from source
-        const { data: src } = await supabase.from("accounts").select("balance").eq("id", accountId).single();
-        const { data: dst } = await supabase.from("accounts").select("balance").eq("id", transferToAccountId).single();
+        const { data: src } = await sb.from("accounts").select("balance").eq("id", accountId).single();
+        const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
         if (!dst) {
           toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
         } else {
-          await supabase.from("accounts").update({ balance: Number(src?.balance || 0) - amt }).eq("id", accountId);
-          await supabase.from("accounts").update({ balance: Number(dst?.balance || 0) + amt }).eq("id", transferToAccountId);
+          await sb.from("accounts").update({ balance: Number(src?.balance || 0) - amt }).eq("id", accountId);
+          await sb.from("accounts").update({ balance: Number(dst?.balance || 0) + amt }).eq("id", transferToAccountId);
         }
       }
 
