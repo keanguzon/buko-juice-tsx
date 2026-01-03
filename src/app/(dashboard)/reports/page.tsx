@@ -68,6 +68,19 @@ export default function ReportsPage() {
           }
           categoryMap[key].total += Number(t.amount);
           categoryMap[key].count += 1;
+        } else {
+          const key = t.type === "transfer" ? "transfer" : "uncategorized";
+          if (!categoryMap[key]) {
+            categoryMap[key] = {
+              name: t.type === "transfer" ? "Transfers" : "Uncategorized",
+              color: null,
+              type: t.type,
+              total: 0,
+              count: 0,
+            };
+          }
+          categoryMap[key].total += Number(t.amount);
+          categoryMap[key].count += 1;
         }
       });
 
