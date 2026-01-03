@@ -23,6 +23,94 @@ export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "Passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setChangingPassword(true);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Success!",
+        description: "Password changed successfully",
+      });
+      setShowPasswordModal(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change password",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    setChangingPassword(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) throw new Error("Not logged in");
+
+      // Delete user from public.users table
+      await (supabase as any)
+        .from("users")
+        .delete()
+        .eq("id", session.user.id);
+
+      // Delete auth user
+      const { error } = await supabase.auth.admin.deleteUser(session.user.id);
+      if (error) throw error;
+
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted",
+      });
+
+      // Redirect to login
+      window.location.href = "/login";
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete account",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingPassword(false);
+      setShowDeleteModal(false);
+    }
+  };
+
   useEffect(() => {
     loadProfile();
   }, []);
@@ -281,9 +369,99 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button variant="outline" className="w-full sm:w-auto">Change Password</Button>
-              <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
+              <Button 
+                variant="outline" 
+                className="w-full sm:w-auto"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Change Password
+              </Button>
+              <Button 
+                variant="destructive" 
+                className="w-full sm:w-auto"
+                onClick={() => setShowDeleteModal(true)}
+              >
+                Delete Account
+              </Button>
             </div>
+
+            {/* Change Password Modal */}
+            {showPasswordModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6 mx-4">
+                  <h3 className="text-xl font-semibold mb-4">Change Password</h3>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="newPassword">New Password</Label>
+                      <Input
+                        id="newPassword"
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="confirmPassword">Confirm Password</Label>
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                      />
+                    </div>
+                  </div>
+                  <div className="flex gap-3 mt-6">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowPasswordModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      className="flex-1"
+                      onClick={handleChangePassword}
+                      disabled={changingPassword}
+                    >
+                      {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Save Password
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delete Account Modal */}
+            {showDeleteModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
+                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6 mx-4">
+                  <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
+                  <p className="text-muted-foreground mb-6">
+                    Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
+                  </p>
+                  <div className="flex gap-3">
+                    <Button
+                      variant="outline"
+                      className="flex-1"
+                      onClick={() => setShowDeleteModal(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={handleDeleteAccount}
+                      disabled={changingPassword}
+                    >
+                      {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Delete
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
