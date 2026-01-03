@@ -16,7 +16,7 @@ export default function Home() {
           </Link>
           <nav className="flex items-center gap-2 sm:gap-4">
             <ModeToggle />
-            <Link href="/login">
+            <Link href="/login" className="hidden sm:inline">
               <Button variant="ghost" size="sm" className="text-sm sm:text-base">Sign In</Button>
             </Link>
             <Link href="/register">
