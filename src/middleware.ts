@@ -13,8 +13,6 @@ export async function middleware(request: NextRequest) {
     "/dashboard",
     "/transactions",
     "/accounts",
-    "/budgets",
-    "/goals",
     "/categories",
     "/reports",
     "/settings",

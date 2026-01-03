@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Filter } from "lucide-react";
+import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 
 export default function TransactionsPage() {
@@ -13,6 +13,7 @@ export default function TransactionsPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
 
   useEffect(() => {
     loadTransactions();
@@ -37,6 +38,18 @@ export default function TransactionsPage() {
     setIsLoading(false);
   };
 
+  const filteredTransactions =
+    filter === "all" ? transactions : transactions.filter((t) => t.type === filter);
+
+  const filterLabel =
+    filter === "all"
+      ? "ALL"
+      : filter === "expense"
+      ? "Expense"
+      : filter === "income"
+      ? "Income"
+      : "Transfer";
+
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-500">
@@ -48,10 +61,36 @@ export default function TransactionsPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" className="transition-all hover:scale-105">
-              <Filter className="mr-2 h-4 w-4" />
-              Filter
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={filter === "all" ? "default" : "outline"}
+                className="transition-all hover:scale-105"
+                onClick={() => setFilter("all")}
+              >
+                ALL
+              </Button>
+              <Button
+                variant={filter === "expense" ? "default" : "outline"}
+                className="transition-all hover:scale-105"
+                onClick={() => setFilter("expense")}
+              >
+                Expense
+              </Button>
+              <Button
+                variant={filter === "income" ? "default" : "outline"}
+                className="transition-all hover:scale-105"
+                onClick={() => setFilter("income")}
+              >
+                Income
+              </Button>
+              <Button
+                variant={filter === "transfer" ? "default" : "outline"}
+                className="transition-all hover:scale-105"
+                onClick={() => setFilter("transfer")}
+              >
+                Transfer
+              </Button>
+            </div>
             <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105 hover:shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
@@ -61,13 +100,16 @@ export default function TransactionsPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle>All Transactions</CardTitle>
+          <CardTitle>Transactions</CardTitle>
           <CardDescription>Your complete transaction history</CardDescription>
+          <div className="pt-2 text-sm text-muted-foreground">
+            Showing: <span className="font-medium text-foreground">{filterLabel}</span>
+          </div>
         </CardHeader>
         <CardContent>
-          {!isLoading && transactions && transactions.length > 0 ? (
+          {!isLoading && filteredTransactions && filteredTransactions.length > 0 ? (
             <div className="space-y-4">
-              {transactions.map((transaction, index) => (
+              {filteredTransactions.map((transaction, index) => (
                 <div
                   key={transaction.id}
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md animate-in slide-in-from-left"
@@ -125,9 +167,9 @@ export default function TransactionsPage() {
           ) : !isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 animate-in fade-in duration-500">
               <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-lg font-medium">No transactions yet</p>
+              <p className="text-lg font-medium">No transactions found</p>
               <p className="text-sm text-muted-foreground mb-4">
-                Start tracking by adding your first transaction
+                Try changing the filter or add a transaction
               </p>
               <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
                 <Plus className="mr-2 h-4 w-4" />

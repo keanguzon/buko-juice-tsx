@@ -1,7 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Plus, Tags, ArrowDownLeft, ArrowUpRight } from "lucide-react";
+import AddCategoryModal from "@/components/categories/AddCategoryModal";
 
 type Category = {
   id: string;
@@ -14,24 +18,52 @@ type Category = {
   created_at?: string;
 };
 
-export default async function CategoriesPage() {
+export default function CategoriesPage() {
   const supabase = createClient();
+  const sb = supabase as any;
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const { data: categories } = await supabase
-    .from("categories")
-    .select("*")
-    .or(`user_id.eq.${session?.user.id},is_default.eq.true`)
-    .order("name");
+  const loadCategories = async () => {
+    setIsLoading(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
 
-  const incomeCategories = (categories as Category[])?.filter((c) => c.type === "income") || [];
-  const expenseCategories = (categories as Category[])?.filter((c) => c.type === "expense") || [];
+    if (!session?.user?.id) {
+      setCategories([]);
+      setIsLoading(false);
+      return;
+    }
+
+    const { data } = await sb
+      .from("categories")
+      .select("*")
+      .or(`user_id.eq.${session.user.id},is_default.eq.true`)
+      .order("name");
+
+    setCategories((data ?? []) as Category[]);
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const incomeCategories = useMemo(
+    () => (categories ?? []).filter((c) => c.type === "income"),
+    [categories],
+  );
+  const expenseCategories = useMemo(
+    () => (categories ?? []).filter((c) => c.type === "expense"),
+    [categories],
+  );
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Categories</h2>
@@ -39,7 +71,7 @@ export default async function CategoriesPage() {
             Organize your transactions with categories
           </p>
         </div>
-        <Button>
+        <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105 hover:shadow-lg">
           <Plus className="mr-2 h-4 w-4" />
           Add Category
         </Button>
@@ -57,7 +89,7 @@ export default async function CategoriesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {incomeCategories.map((category) => (
+              {!isLoading && incomeCategories.map((category) => (
                 <div
                   key={category.id}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
@@ -89,7 +121,7 @@ export default async function CategoriesPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {expenseCategories.map((category) => (
+              {!isLoading && expenseCategories.map((category) => (
                 <div
                   key={category.id}
                   className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
@@ -111,5 +143,12 @@ export default async function CategoriesPage() {
         </Card>
       </div>
     </div>
+
+    <AddCategoryModal
+      isOpen={isModalOpen}
+      onClose={() => setIsModalOpen(false)}
+      onCreated={loadCategories}
+    />
+    </>
   );
 }

@@ -9,8 +9,8 @@ const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Buko Juice - Money Tracker",
-  description: "Track your finances with ease. Manage expenses, income, budgets, and savings goals.",
-  keywords: ["money tracker", "finance", "budget", "expenses", "savings"],
+  description: "Track your finances with ease. Manage expenses, income, accounts, and categories.",
+  keywords: ["money tracker", "finance", "expenses", "accounts", "categories"],
   icons: {
     icon: "/logos/main-logo.png",
   },

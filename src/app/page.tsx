@@ -35,7 +35,7 @@ export default function Home() {
               <span className="text-primary">Finances</span>
             </h1>
             <p className="max-w-[42rem] leading-normal text-muted-foreground sm:text-xl sm:leading-8">
-              Track your expenses, manage budgets, and achieve your savings goals
+              Track your expenses and manage your money with ease
               with Buko Juice - your personal finance companion.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
