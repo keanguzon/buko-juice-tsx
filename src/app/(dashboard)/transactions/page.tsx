@@ -15,10 +15,11 @@ export default function TransactionsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     loadTransactions();
-  }, []);
+  }, [refreshKey]);
 
   const loadTransactions = async () => {
     setIsLoading(true);
@@ -207,7 +208,7 @@ export default function TransactionsPage() {
       isOpen={isModalOpen}
       onClose={() => {
         setIsModalOpen(false);
-        loadTransactions();
+        setRefreshKey(prev => prev + 1);
       }}
     />
   </>

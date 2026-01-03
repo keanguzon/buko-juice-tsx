@@ -396,7 +396,7 @@ export default function SettingsPage() {
             {/* Change Password Modal */}
             {showPasswordModal && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200 min-h-screen overflow-y-auto"
                 onClick={() => setShowPasswordModal(false)}
               >
                 <div
@@ -450,7 +450,7 @@ export default function SettingsPage() {
             {/* Delete Account Modal */}
             {showDeleteModal && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200 min-h-screen overflow-y-auto"
                 onClick={() => setShowDeleteModal(false)}
               >
                 <div
