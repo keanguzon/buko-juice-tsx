@@ -12,15 +12,15 @@ export default function Home() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           <Link href="/" className="flex items-center space-x-2">
             <Image src="/logos/main-logo.png" alt="Buko Juice Logo" width={32} height={32} className="h-8 w-8" />
-            <span className="text-xl font-bold">Buko Juice</span>
+            <span className="text-lg sm:text-xl font-bold">Buko Juice</span>
           </Link>
-          <nav className="flex items-center space-x-4">
+          <nav className="flex items-center gap-2 sm:gap-4">
             <ModeToggle />
             <Link href="/login">
-              <Button variant="ghost">Sign In</Button>
+              <Button variant="ghost" size="sm" className="text-sm sm:text-base">Sign In</Button>
             </Link>
             <Link href="/register">
-              <Button>Get Started</Button>
+              <Button size="sm" className="text-sm sm:text-base">Get Started</Button>
             </Link>
           </nav>
         </div>
