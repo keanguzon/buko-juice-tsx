@@ -38,8 +38,8 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
   const { toast } = useToast();
 
   const [selectedAccount, setSelectedAccount] = useState<AccountOption | null>(null);
-  const [balance, setBalance] = useState("0.00");
-  const [interestRate, setInterestRate] = useState("0.00");
+  const [balance, setBalance] = useState("");
+  const [interestRate, setInterestRate] = useState("");
   const [includeNetworth, setIncludeNetworth] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
 
