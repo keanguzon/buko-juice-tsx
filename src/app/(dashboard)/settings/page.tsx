@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { User, Upload, Loader2, Bell, Palette, Shield } from "lucide-react";
+import { User, Upload, Loader2, Palette, Shield } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -243,35 +243,30 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
 
-        {/* Preferences */}
+        {/* Currency */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Palette className="h-5 w-5" />
-              Preferences
+              Currency
             </CardTitle>
-            <CardDescription>Customize your experience</CardDescription>
+            <CardDescription>Select your preferred currency</CardDescription>
           </CardHeader>
           <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Preferences settings coming soon.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Notifications */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Bell className="h-5 w-5" />
-              Notifications
-            </CardTitle>
-            <CardDescription>Configure notification settings</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Notification settings coming soon.
-            </p>
+            <div className="space-y-2">
+              <Label htmlFor="currency">Default Currency</Label>
+              <select
+                id="currency"
+                className="w-full md:w-64 px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
+                defaultValue="PHP"
+              >
+                <option value="PHP">PHP - Philippine Peso</option>
+                <option value="USD">USD - US Dollar</option>
+                <option value="EUR">EUR - Euro</option>
+                <option value="GBP">GBP - British Pound</option>
+                <option value="JPY">JPY - Japanese Yen</option>
+              </select>
+            </div>
           </CardContent>
         </Card>
 
@@ -284,9 +279,11 @@ export default function SettingsPage() {
             </CardTitle>
             <CardDescription>Manage your account security</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <Button variant="outline">Change Password</Button>
-            <Button variant="destructive">Delete Account</Button>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button variant="outline" className="w-full sm:w-auto">Change Password</Button>
+              <Button variant="destructive" className="w-full sm:w-auto">Delete Account</Button>
+            </div>
           </CardContent>
         </Card>
       </div>
