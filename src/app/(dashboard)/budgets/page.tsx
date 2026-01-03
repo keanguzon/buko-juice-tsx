@@ -14,7 +14,7 @@ export default async function BudgetsPage() {
   const { data: budgets } = await supabase
     .from("budgets")
     .select("*, category:categories(*)")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .order("created_at", { ascending: false });
 
   return (
