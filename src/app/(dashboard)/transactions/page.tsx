@@ -142,12 +142,22 @@ export default function TransactionsPage() {
                     </div>
                     <div>
                       <p className="font-medium">
-                        {transaction.description || transaction.category?.name || "Transaction"}
+                        {transaction.description || transaction.category?.name || (transaction.type === "transfer" ? "Transfer" : "Transaction")}
                       </p>
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>{transaction.account?.name}</span>
-                        <span>•</span>
-                        <span>{transaction.category?.name}</span>
+                        {transaction.category?.name && (
+                          <>
+                            <span>•</span>
+                            <span>{transaction.category.name}</span>
+                          </>
+                        )}
+                        {transaction.type === "transfer" && (
+                          <>
+                            <span>•</span>
+                            <span>Transfer</span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

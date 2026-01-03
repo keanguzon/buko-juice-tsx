@@ -35,6 +35,18 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    // Auto-select first matching category when type changes
+    if (type === "transfer") {
+      setCategoryId("transfer");
+    } else {
+      const matchingCats = categories.filter(c => c.type === type);
+      if (matchingCats.length > 0) {
+        setCategoryId(matchingCats[0]?.id ?? "");
+      }
+    }
+  }, [type, categories]);
+
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) return;
@@ -77,7 +89,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       const { error } = await sb.from("transactions").insert({
         user_id: session.user.id,
         account_id: accountId,
-        category_id: categoryId || null,
+        category_id: type === "transfer" ? null : (categoryId || null),
         type,
         amount: amt,
         description,
@@ -254,17 +266,26 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
             {/* Category */}
             <div>
               <label htmlFor="category" className="block text-sm font-medium mb-2">Category</label>
-              <select
-                id="category"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
-              >
-                <option value="">No category</option>
-                {categories.map((c) => (
-                  <option value={c.id} key={c.id}>{c.name}</option>
-                ))}
-              </select>
+              {type === "transfer" ? (
+                <input
+                  type="text"
+                  value="Transfer"
+                  readOnly
+                  className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 bg-gray-50 dark:bg-slate-950 cursor-not-allowed text-muted-foreground"
+                />
+              ) : (
+                <select
+                  id="category"
+                  value={categoryId}
+                  onChange={(e) => setCategoryId(e.target.value)}
+                  className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                >
+                  <option value="">No category</option>
+                  {categories.filter(c => c.type === type).map((c) => (
+                    <option value={c.id} key={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              )}
             </div>
 
             {/* Date */}
