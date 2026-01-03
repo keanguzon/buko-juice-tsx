@@ -17,6 +17,7 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
 
   const [name, setName] = useState("");
   const [type, setType] = useState<"income" | "expense">("expense");
+  const [color, setColor] = useState("#ef4444"); // Default red for expense
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -39,15 +40,13 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
         return;
       }
 
-      const defaultColor = type === "income" ? "#22c55e" : "#ef4444";
-
       const { error } = await (supabase as any)
         .from("categories")
         .insert({
           user_id: session.user.id,
           name: name.trim(),
           type,
-          color: defaultColor,
+          color: color,
           icon: null,
           is_default: false,
         });
@@ -60,6 +59,7 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
       toast({ title: "Category added", description: "Your category was created successfully." });
       setName("");
       setType("expense");
+      setColor("#ef4444");
       onClose();
       onCreated?.();
     } catch {
@@ -108,13 +108,39 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
             <label className="block text-sm font-medium mb-2">Type</label>
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as "income" | "expense")}
+              onChange={(e) => {
+                const newType = e.target.value as "income" | "expense";
+                setType(newType);
+                // Update default color when type changes
+                setColor(newType === "income" ? "#22c55e" : "#ef4444");
+              }}
               className="w-full px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
               disabled={isLoading}
             >
               <option value="expense">Expense</option>
               <option value="income">Income</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">Color</label>
+            <div className="flex gap-3 items-center">
+              <input
+                type="color"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="h-10 w-20 rounded-lg border dark:border-slate-700 cursor-pointer"
+                disabled={isLoading}
+              />
+              <input
+                type="text"
+                value={color}
+                onChange={(e) => setColor(e.target.value)}
+                className="flex-1 px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700 font-mono text-sm"
+                placeholder="#ef4444"
+                disabled={isLoading}
+              />
+            </div>
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
