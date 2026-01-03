@@ -2,7 +2,7 @@
 -- BUKO JUICE MONEY TRACKER - COMPLETE DATABASE RESET
 -- =====================================================
 -- This script will DROP ALL existing tables and recreate them from scratch
--- WARNING: This will delete ALL data in your database!
+-- WARNING: This will delete ALL data AND ALL USERS in your database!
 -- Run this in your Supabase SQL Editor
 
 -- =====================================================
@@ -19,6 +19,12 @@ DROP TABLE IF EXISTS public.users CASCADE;
 -- Drop the trigger and function
 DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- =====================================================
+-- STEP 1.5: DELETE ALL AUTH USERS (COMPLETE RESET)
+-- =====================================================
+-- WARNING: This will delete ALL registered users!
+DELETE FROM auth.users;
 
 -- =====================================================
 -- STEP 2: ENABLE EXTENSIONS

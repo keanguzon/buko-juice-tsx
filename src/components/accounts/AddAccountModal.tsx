@@ -239,12 +239,13 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">₱</span>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       id="balance"
                       value={balance}
                       onChange={(e) => setBalance(e.target.value)}
-                      step="0.01"
                       className="w-full pl-8 pr-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
+                      placeholder="0.00"
                       required
                     />
                   </div>
@@ -257,14 +258,13 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
                       Interest Rate (% per year)
                     </label>
                     <input
-                      type="number"
+                      type="text"
+                      inputMode="decimal"
                       id="interestRate"
                       value={interestRate}
                       onChange={(e) => setInterestRate(e.target.value)}
-                      step="0.01"
-                      min="0"
-                      max="100"
                       className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
+                      placeholder="0.00"
                     />
                   </div>
                 )}

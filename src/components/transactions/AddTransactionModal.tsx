@@ -275,7 +275,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                 id="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all text-base"
                 required
               />
             </div>
