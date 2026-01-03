@@ -99,7 +99,7 @@ export default function AccountsPage() {
                       {account.name}
                     </CardTitle>
                     <div className="p-2 rounded-full transition-all duration-200 hover:scale-110" style={{ backgroundColor: `${account.color}20` }}>
-                      {account.type === 'e_wallet' && account.icon ? (
+                      {account.icon ? (
                         <img src={`/logos/${account.icon}`} alt={account.name} className="h-5 w-5" />
                       ) : (
                         <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />

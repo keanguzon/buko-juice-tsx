@@ -16,7 +16,6 @@ import {
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -30,11 +29,17 @@ const navItems = [
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  isCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
+export function Sidebar({
+  isOpen = false,
+  onClose,
+  isCollapsed = false,
+  onCollapsedChange,
+}: SidebarProps) {
   const pathname = usePathname();
-  const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <>
@@ -104,7 +109,7 @@ export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
             variant="ghost"
             size="sm"
             className="w-full justify-center"
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={() => onCollapsedChange?.(!isCollapsed)}
           >
             {isCollapsed ? (
               <ChevronRight className="h-4 w-4" />

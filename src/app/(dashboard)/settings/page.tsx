@@ -24,11 +24,12 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState("");
 
   const [changingPassword, setChangingPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
@@ -62,7 +63,6 @@ export default function SettingsPage() {
         description: "Password changed successfully",
       });
       setShowPasswordModal(false);
-      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
@@ -77,27 +77,34 @@ export default function SettingsPage() {
   };
 
   const handleDeleteAccount = async () => {
-    setChangingPassword(true);
+    if (!deletePassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingAccount(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) throw new Error("Not logged in");
+      const res = await fetch("/api/delete-account", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: deletePassword }),
+      });
 
-      // Delete user from public.users table
-      await (supabase as any)
-        .from("users")
-        .delete()
-        .eq("id", session.user.id);
-
-      // Delete auth user
-      const { error } = await supabase.auth.admin.deleteUser(session.user.id);
-      if (error) throw error;
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(payload?.error || "Failed to delete account");
+      }
 
       toast({
         title: "Account deleted",
         description: "Your account has been permanently deleted",
       });
 
-      // Redirect to login
+      await supabase.auth.signOut();
       window.location.href = "/login";
     } catch (error: any) {
       toast({
@@ -106,8 +113,9 @@ export default function SettingsPage() {
         variant: "destructive",
       });
     } finally {
-      setChangingPassword(false);
+      setDeletingAccount(false);
       setShowDeleteModal(false);
+      setDeletePassword("");
     }
   };
 
@@ -387,8 +395,14 @@ export default function SettingsPage() {
 
             {/* Change Password Modal */}
             {showPasswordModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6 mx-4">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200"
+                onClick={() => setShowPasswordModal(false)}
+              >
+                <div
+                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <h3 className="text-xl font-semibold mb-4">Change Password</h3>
                   <div className="space-y-4">
                     <div className="space-y-2">
@@ -435,12 +449,28 @@ export default function SettingsPage() {
 
             {/* Delete Account Modal */}
             {showDeleteModal && (
-              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200">
-                <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6 mx-4">
+              <div
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200"
+                onClick={() => setShowDeleteModal(false)}
+              >
+                <div
+                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
                   <p className="text-muted-foreground mb-6">
                     Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
                   </p>
+                  <div className="space-y-2 mb-6">
+                    <Label htmlFor="deletePassword">Password</Label>
+                    <Input
+                      id="deletePassword"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Enter your password"
+                    />
+                  </div>
                   <div className="flex gap-3">
                     <Button
                       variant="outline"
@@ -453,9 +483,9 @@ export default function SettingsPage() {
                       variant="destructive"
                       className="flex-1"
                       onClick={handleDeleteAccount}
-                      disabled={changingPassword}
+                      disabled={deletingAccount}
                     >
-                      {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Delete
                     </Button>
                   </div>
