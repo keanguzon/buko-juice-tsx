@@ -57,14 +57,14 @@
     @apply border-border;
   }
 
-  /* Smooth theme transitions */
-  body {
-    @apply bg-background text-foreground;
-  }
-
-  /* Enhanced theme transition with fade effect */
+  /* Smooth theme transitions for root elements */
   html {
     transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    transition: background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1), color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   /* Apply smooth transition to all theme-aware elements */
