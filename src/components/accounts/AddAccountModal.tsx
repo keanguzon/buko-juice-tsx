@@ -18,6 +18,7 @@ const accountOptions: AccountOption[] = [
   // Wallet Category
   { type: "e_wallet", icon: "gcash.png", name: "GCash", color: "#007DFE", isSavings: false },
   { type: "e_wallet", icon: "maya.png", name: "Maya", color: "#10b981", isSavings: false },
+  { type: "bank", icon: "gotyme.png", name: "GoTyme", color: "#06b6d4", isSavings: false },
   { type: "cash", icon: "", name: "Cash on Hand", color: "#86efac", isSavings: false },
   // Savings Category
   { type: "e_wallet", icon: "gcash.png", name: "GCash Savings", color: "#007DFE", isSavings: true },
