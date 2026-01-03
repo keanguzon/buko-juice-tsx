@@ -49,6 +49,9 @@ export interface Database {
           color: string | null;
           icon: string | null;
           is_active: boolean;
+          is_savings: boolean;
+          interest_rate: number;
+          include_in_networth: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -62,6 +65,9 @@ export interface Database {
           color?: string | null;
           icon?: string | null;
           is_active?: boolean;
+          is_savings?: boolean;
+          interest_rate?: number;
+          include_in_networth?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -75,6 +81,9 @@ export interface Database {
           color?: string | null;
           icon?: string | null;
           is_active?: boolean;
+          is_savings?: boolean;
+          interest_rate?: number;
+          include_in_networth?: boolean;
           created_at?: string;
           updated_at?: string;
         };
