@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   TrendingUp,
   Wallet,
-  Target,
   ArrowLeftRight,
 } from "lucide-react";
 
@@ -35,16 +34,6 @@ export default async function DashboardPage() {
     .limit(5);
 
   const transactions = (transactionsData ?? []) as any[];
-
-  // Get goals
-  const { data: goalsData } = await supabase
-    .from("goals")
-    .select("*")
-    .eq("user_id", session?.user.id || "")
-    .eq("is_completed", false)
-    .limit(3);
-
-  const goals = (goalsData ?? []) as any[];
 
   // Calculate totals
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
@@ -129,7 +118,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Recent Transactions */}
-        <Card className="col-span-4 animate-in slide-in-from-left duration-500 delay-500">
+        <Card className="col-span-7 animate-in slide-in-from-left duration-500 delay-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ArrowLeftRight className="h-5 w-5" />
@@ -194,54 +183,6 @@ export default async function DashboardPage() {
                 <p className="text-muted-foreground">No transactions yet</p>
                 <p className="text-sm text-muted-foreground">
                   Start by adding your first transaction
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Goals */}
-        <Card className="col-span-3 animate-in slide-in-from-right duration-500 delay-500">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Target className="h-5 w-5" />
-              Savings Goals
-            </CardTitle>
-            <CardDescription>Track your progress</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {goals && goals.length > 0 ? (
-              <div className="space-y-4">
-                {goals.map((goal, index) => {
-                  const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100;
-                  return (
-                    <div key={goal.id} className="space-y-2 animate-in slide-in-from-right hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200" style={{ animationDelay: `${index * 50}ms` }}>
-                      <div className="flex items-center justify-between">
-                        <p className="text-sm font-medium">{goal.name}</p>
-                        <span className="text-xs text-muted-foreground">
-                          {progress.toFixed(0)}%
-                        </span>
-                      </div>
-                      <div className="h-2 rounded-full bg-secondary">
-                        <div
-                          className="h-full rounded-full bg-primary transition-all"
-                          style={{ width: `${Math.min(progress, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{formatCurrency(Number(goal.current_amount))}</span>
-                        <span>{formatCurrency(Number(goal.target_amount))}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
-                <Target className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
-                <p className="text-muted-foreground">No goals yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Set a savings goal to track your progress
                 </p>
               </div>
             )}
