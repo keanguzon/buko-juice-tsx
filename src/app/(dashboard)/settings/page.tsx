@@ -15,7 +15,8 @@ export default function SettingsPage() {
   const supabase = createClient();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingCurrency, setSavingCurrency] = useState(false);
   const [uploading, setUploading] = useState(false);
   
   const [profile, setProfile] = useState<any>(null);
@@ -33,6 +34,8 @@ export default function SettingsPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+  // Currency state
+  const [currency, setCurrency] = useState("PHP");
 
   const openPasswordModal = async () => {
     try {
@@ -239,20 +242,27 @@ export default function SettingsPage() {
   const loadProfile = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      
       if (session?.user) {
-        const { data } = await supabase
+        // Load user profile
+        const { data: userData } = await supabase
           .from("users")
           .select("*")
           .eq("id", session.user.id)
           .single();
-        
-        if (data) {
-          const profileRow = data as any;
-          setProfile(profileRow);
-          setName(profileRow.name || "");
-          setUsername(profileRow.username || "");
-          setAvatarUrl(profileRow.avatar_url || "");
+        if (userData) {
+          setProfile(userData);
+          setName((userData as any).name || "");
+          setUsername((userData as any).username || "");
+          setAvatarUrl((userData as any).avatar_url || "");
+        }
+        // Load user preferences (currency)
+        const { data: prefData } = await supabase
+          .from("user_preferences")
+          .select("currency")
+          .eq("user_id", session.user.id)
+          .single();
+        if (prefData && (prefData as any).currency) {
+          setCurrency((prefData as any).currency);
         }
       }
     } catch (error) {
@@ -319,28 +329,26 @@ export default function SettingsPage() {
     }
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-
+  const handleSaveProfile = async () => {
+    setSavingProfile(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
-      const { error } = await (supabase as any)
+      // Update user profile
+      const { error: userError } = await (supabase as any)
         .from("users")
         .update({
           name,
           username: username.toLowerCase(),
         })
         .eq("id", session.user.id);
-
-      if (error) throw error;
+      if (userError) throw userError;
 
       toast({
         title: "Success!",
         description: "Profile updated successfully",
       });
-
       loadProfile();
     } catch (error: any) {
       toast({
@@ -349,7 +357,33 @@ export default function SettingsPage() {
         variant: "destructive",
       });
     } finally {
-      setSaving(false);
+      setSavingProfile(false);
+    }
+  };
+
+  const handleSaveCurrency = async () => {
+    setSavingCurrency(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) return;
+
+      const { error: prefError } = await supabase
+        .from("user_preferences")
+        .upsert({ user_id: session.user.id, currency } as any, { onConflict: "user_id" });
+      if (prefError) throw prefError;
+
+      toast({
+        title: "Success!",
+        description: "Currency updated successfully",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update currency",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingCurrency(false);
     }
   };
 
@@ -445,9 +479,9 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            <Button onClick={handleSave} disabled={saving}>
-              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
+            <Button onClick={handleSaveProfile} disabled={savingProfile}>
+              {savingProfile && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Profile
             </Button>
           </CardContent>
         </Card>
@@ -462,12 +496,14 @@ export default function SettingsPage() {
             <CardDescription>Select your preferred currency</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-2">
+            <div className="space-y-4">
+              <div className="space-y-2">
               <Label htmlFor="currency">Default Currency</Label>
               <select
                 id="currency"
                 className="w-full px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
-                defaultValue="PHP"
+                value={currency}
+                onChange={e => setCurrency(e.target.value)}
               >
                 <option value="PHP">PHP - Philippine Peso</option>
                 <option value="USD">USD - US Dollar</option>
@@ -475,6 +511,12 @@ export default function SettingsPage() {
                 <option value="GBP">GBP - British Pound</option>
                 <option value="JPY">JPY - Japanese Yen</option>
               </select>
+              </div>
+
+              <Button onClick={handleSaveCurrency} disabled={savingCurrency}>
+                {savingCurrency && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Currency
+              </Button>
             </div>
           </CardContent>
         </Card>

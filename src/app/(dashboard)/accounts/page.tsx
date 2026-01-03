@@ -29,6 +29,7 @@ export default function AccountsPage() {
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [currency, setCurrency] = useState("PHP");
 
   useEffect(() => {
     loadAccounts();
@@ -41,6 +42,13 @@ export default function AccountsPage() {
     } = await supabase.auth.getSession();
 
     if (session?.user?.id) {
+      const { data: pref } = await supabase
+        .from("user_preferences")
+        .select("currency")
+        .eq("user_id", session.user.id)
+        .single();
+      if (pref && (pref as any).currency) setCurrency((pref as any).currency);
+
       const { data } = await supabase
         .from("accounts")
         .select("*")
@@ -78,7 +86,7 @@ export default function AccountsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold text-primary">
-              {formatCurrency(totalBalance)}
+              {formatCurrency(totalBalance, currency)}
             </p>
           </CardContent>
         </Card>
@@ -108,7 +116,7 @@ export default function AccountsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">
-                      {formatCurrency(Number(account.balance), account.currency)}
+                      {formatCurrency(Number(account.balance), currency)}
                     </div>
                     <p className="text-xs text-muted-foreground">
                       {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}

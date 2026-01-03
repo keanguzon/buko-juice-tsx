@@ -9,6 +9,7 @@ import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Trash2 } from "lucid
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import { useToast } from "@/components/ui/use-toast";
 
+
 export default function TransactionsPage() {
   const supabase = createClient();
   const sb = supabase as any;
@@ -20,6 +21,51 @@ export default function TransactionsPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currency, setCurrency] = useState("PHP");
+
+  useEffect(() => {
+    const loadTransactions = async () => {
+      setIsLoading(true);
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      let userCurrency = "PHP";
+      if (session?.user?.id) {
+        const { data: pref } = await supabase
+          .from("user_preferences")
+          .select("currency")
+          .eq("user_id", session.user.id)
+          .single();
+        if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
+        setCurrency(userCurrency);
+
+        const { data, error } = await sb
+          .from("transactions")
+          .select(
+            "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name)"
+          )
+          .eq("user_id", session.user.id)
+          .order("date", { ascending: false })
+          .limit(50);
+
+        if (error) {
+          console.error("Failed to load transactions", error);
+          toast({
+            title: "Failed to load transactions",
+            description: error.message,
+            variant: "destructive",
+          });
+          setTransactions([]);
+        } else {
+          setTransactions(data || []);
+        }
+      }
+      setIsLoading(false);
+    };
+    loadTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   useEffect(() => {
     loadTransactions();
@@ -82,7 +128,16 @@ export default function TransactionsPage() {
       data: { session },
     } = await supabase.auth.getSession();
 
+    let userCurrency = "PHP";
     if (session?.user?.id) {
+      const { data: pref } = await supabase
+        .from("user_preferences")
+        .select("currency")
+        .eq("user_id", session.user.id)
+        .single();
+      if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
+      setCurrency(userCurrency);
+
       const { data, error } = await sb
         .from("transactions")
         .select(
@@ -241,7 +296,7 @@ export default function TransactionsPage() {
                         }`}
                       >
                         {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                        {formatCurrency(Number(transaction.amount))}
+                        {formatCurrency(Number(transaction.amount), currency)}
                       </p>
                       <p className="text-sm text-muted-foreground">
                         {formatDate(transaction.date)}
@@ -299,7 +354,7 @@ export default function TransactionsPage() {
             </p>
             <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg mb-6 text-sm">
               <p className="font-medium">{deleteConfirm.description || deleteConfirm.category?.name || "Transaction"}</p>
-              <p className="text-muted-foreground">{formatCurrency(Number(deleteConfirm.amount))} • {formatDate(deleteConfirm.date)}</p>
+              <p className="text-muted-foreground">{formatCurrency(Number(deleteConfirm.amount), currency)} • {formatDate(deleteConfirm.date)}</p>
             </div>
             <div className="flex gap-3">
               <button

@@ -1,4 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatCurrency } from "@/lib/utils";
 import {
@@ -9,87 +11,107 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 
-export default async function DashboardPage() {
+export default function DashboardPage() {
   const supabase = createClient();
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [monthlyIncome, setMonthlyIncome] = useState(0);
+  const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [currency, setCurrency] = useState("PHP");
+  const [loading, setLoading] = useState(true);
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      const { data: { session } } = await supabase.auth.getSession();
+      let userCurrency = "PHP";
+      if (session?.user?.id) {
+        const { data: pref } = await supabase
+          .from("user_preferences")
+          .select("currency")
+          .eq("user_id", session.user.id)
+          .single();
+        if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
+        setCurrency(userCurrency);
 
-  // Get accounts
-  const { data: accountsData } = await supabase
-    .from("accounts")
-    .select("*")
-    .eq("user_id", session?.user.id || "")
-    .eq("is_active", true);
+        // Get accounts
+        const { data: accountsData } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .eq("is_active", true);
+        setAccounts(accountsData ?? []);
 
-  const accounts = (accountsData ?? []) as any[];
+        // Get recent transactions
+        const { data: transactionsData } = await supabase
+          .from("transactions")
+          .select("*, category:categories(*), account:accounts(*)")
+          .eq("user_id", session.user.id)
+          .order("date", { ascending: false })
+          .limit(5);
+        setTransactions(transactionsData ?? []);
 
-  // Get recent transactions
-  const { data: transactionsData } = await supabase
-    .from("transactions")
-    .select("*, category:categories(*), account:accounts(*)")
-    .eq("user_id", session?.user.id || "")
-    .order("date", { ascending: false })
-    .limit(5);
+        // This month's income/expenses
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+        const { data: monthTransactionsData } = await supabase
+          .from("transactions")
+          .select("type, amount")
+          .eq("user_id", session.user.id)
+          .gte("date", startOfMonth);
+        const monthTransactions = (monthTransactionsData ?? []) as any[];
+        setMonthlyIncome(
+          monthTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + Number(t.amount), 0) || 0
+        );
+        setMonthlyExpenses(
+          monthTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0) || 0
+        );
+      }
+      setLoading(false);
+    };
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  const transactions = (transactionsData ?? []) as any[];
-
-  // Calculate totals
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
-  
-  // Calculate this month's income/expenses
-  const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-  
-  const { data: monthTransactionsData } = await supabase
-    .from("transactions")
-    .select("type, amount")
-    .eq("user_id", session?.user.id || "")
-    .gte("date", startOfMonth);
-
-  const monthTransactions = (monthTransactionsData ?? []) as any[];
-
-  const monthlyIncome =
-    monthTransactions
-      .filter((t) => t.type === "income")
-      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-
-  const monthlyExpenses =
-    monthTransactions
-      .filter((t) => t.type === "expense")
-      .reduce((sum, t) => sum + Number(t.amount), 0) || 0;
-
   const statCards = [
     {
       title: "Total Balance",
-      value: formatCurrency(totalBalance),
+      value: formatCurrency(totalBalance, currency),
       icon: Wallet,
       description: `Across ${accounts?.length || 0} accounts`,
       color: "text-primary",
     },
     {
       title: "Income",
-      value: formatCurrency(monthlyIncome),
+      value: formatCurrency(monthlyIncome, currency),
       icon: ArrowDownLeft,
       description: "This month",
       color: "text-green-500",
     },
     {
       title: "Expenses",
-      value: formatCurrency(monthlyExpenses),
+      value: formatCurrency(monthlyExpenses, currency),
       icon: ArrowUpRight,
       description: "This month",
       color: "text-red-500",
     },
     {
       title: "Net Savings",
-      value: formatCurrency(monthlyIncome - monthlyExpenses),
+      value: formatCurrency(monthlyIncome - monthlyExpenses, currency),
       icon: TrendingUp,
       description: "This month",
       color: monthlyIncome - monthlyExpenses >= 0 ? "text-green-500" : "text-red-500",
     },
   ];
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -172,7 +194,7 @@ export default async function DashboardPage() {
                       }`}
                     >
                       {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                      {formatCurrency(Number(transaction.amount))}
+                      {formatCurrency(Number(transaction.amount), currency)}
                     </span>
                   </div>
                 ))}

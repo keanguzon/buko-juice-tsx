@@ -11,6 +11,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [summary, setSummary] = useState<any>(null);
   const [categories, setCategories] = useState<any[]>([]);
+  const [currency, setCurrency] = useState("PHP");
 
   useEffect(() => {
     loadReports();
@@ -20,7 +21,15 @@ export default function ReportsPage() {
     setLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
 
+    let userCurrency = "PHP";
     if (session?.user?.id) {
+      const { data: pref } = await supabase
+        .from("user_preferences")
+        .select("currency")
+        .eq("user_id", session.user.id)
+        .single();
+      if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
+      setCurrency(userCurrency);
       // Get last 30 days transactions
       const thirtyDaysAgo = new Date();
       thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
@@ -118,7 +127,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-500">
-              {formatCurrency(summary?.totalIncome || 0)}
+              {formatCurrency(summary?.totalIncome || 0, currency)}
             </div>
           </CardContent>
         </Card>
@@ -130,7 +139,7 @@ export default function ReportsPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-red-500">
-              {formatCurrency(summary?.totalExpense || 0)}
+              {formatCurrency(summary?.totalExpense || 0, currency)}
             </div>
           </CardContent>
         </Card>
@@ -146,7 +155,7 @@ export default function ReportsPage() {
                 (summary?.balance || 0) >= 0 ? "text-green-500" : "text-red-500"
               }`}
             >
-              {formatCurrency(summary?.balance || 0)}
+              {formatCurrency(summary?.balance || 0, currency)}
             </div>
           </CardContent>
         </Card>
@@ -185,7 +194,7 @@ export default function ReportsPage() {
                         <span className="font-medium">{cat.name}</span>
                         <span className="text-sm text-muted-foreground">({cat.count})</span>
                       </div>
-                      <span className="font-semibold">{formatCurrency(cat.total)}</span>
+                      <span className="font-semibold">{formatCurrency(cat.total, currency)}</span>
                     </div>
                     <div className="w-full bg-gray-200 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
                       <div
