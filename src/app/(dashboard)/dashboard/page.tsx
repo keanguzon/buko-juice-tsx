@@ -21,14 +21,14 @@ export default async function DashboardPage() {
   const { data: accounts } = await supabase
     .from("accounts")
     .select("*")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .eq("is_active", true);
 
   // Get recent transactions
   const { data: transactions } = await supabase
     .from("transactions")
     .select("*, category:categories(*), account:accounts(*)")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .order("date", { ascending: false })
     .limit(5);
 
@@ -36,7 +36,7 @@ export default async function DashboardPage() {
   const { data: goals } = await supabase
     .from("goals")
     .select("*")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .eq("is_completed", false)
     .limit(3);
 
@@ -50,7 +50,7 @@ export default async function DashboardPage() {
   const { data: monthTransactions } = await supabase
     .from("transactions")
     .select("type, amount")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .gte("date", startOfMonth);
 
   const monthlyIncome = monthTransactions

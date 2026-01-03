@@ -14,7 +14,7 @@ export default async function GoalsPage() {
   const { data: goals } = await supabase
     .from("goals")
     .select("*")
-    .eq("user_id", session?.user.id)
+    .eq("user_id", session?.user.id || "")
     .order("created_at", { ascending: false });
 
   const activeGoals = goals?.filter((g) => !g.is_completed) || [];
