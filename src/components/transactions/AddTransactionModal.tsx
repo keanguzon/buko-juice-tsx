@@ -123,13 +123,13 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       }
 
       toast({ title: "Transaction added", description: "Your transaction was saved." });
-      onClose();
-      router.refresh();
       
       // Reset form
       setAmount("");
       setDescription("");
       setDate(new Date().toISOString().slice(0, 10));
+      
+      onClose();
     } catch (err) {
       toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
     } finally {
