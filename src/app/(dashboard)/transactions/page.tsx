@@ -44,10 +44,12 @@ export default function TransactionsPage() {
 
   const filterLabel =
     filter === "all"
-      ? "ALL"
+      ? "All"
       : filter === "expense"
       ? "Expense"
       : filter === "income"
+      ? "Income"
+      : "Transfer";
       ? "Income"
       : "Transfer";
 
@@ -71,7 +73,7 @@ export default function TransactionsPage() {
                 className="transition-all hover:scale-105"
                 onClick={() => setFilter("all")}
               >
-                ALL
+                All
               </Button>
               <Button
                 variant={filter === "expense" ? "default" : "outline"}
