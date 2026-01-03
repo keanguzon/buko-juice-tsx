@@ -94,7 +94,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="animate-in fade-in slide-in-from-top duration-500">
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">
           Your financial overview at a glance.
@@ -103,8 +103,8 @@ export default async function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
+        {statCards.map((stat, index) => (
+          <Card key={stat.title} className="animate-in slide-in-from-bottom hover:shadow-lg hover:-translate-y-1 transition-all duration-200" style={{ animationDelay: `${index * 100}ms` }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
@@ -119,7 +119,7 @@ export default async function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Recent Transactions */}
-        <Card className="col-span-4">
+        <Card className="col-span-4 animate-in slide-in-from-left duration-500 delay-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ArrowLeftRight className="h-5 w-5" />
@@ -130,10 +130,11 @@ export default async function DashboardPage() {
           <CardContent>
             {transactions && transactions.length > 0 ? (
               <div className="space-y-4">
-                {transactions.map((transaction) => (
+                {transactions.map((transaction, index) => (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between"
+                    className="flex items-center justify-between animate-in slide-in-from-left hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center space-x-4">
                       <div
@@ -178,8 +179,8 @@ export default async function DashboardPage() {
                 ))}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
+                <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
                 <p className="text-muted-foreground">No transactions yet</p>
                 <p className="text-sm text-muted-foreground">
                   Start by adding your first transaction
@@ -190,7 +191,7 @@ export default async function DashboardPage() {
         </Card>
 
         {/* Goals */}
-        <Card className="col-span-3">
+        <Card className="col-span-3 animate-in slide-in-from-right duration-500 delay-500">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Target className="h-5 w-5" />
@@ -201,10 +202,10 @@ export default async function DashboardPage() {
           <CardContent>
             {goals && goals.length > 0 ? (
               <div className="space-y-4">
-                {goals.map((goal) => {
+                {goals.map((goal, index) => {
                   const progress = (Number(goal.current_amount) / Number(goal.target_amount)) * 100;
                   return (
-                    <div key={goal.id} className="space-y-2">
+                    <div key={goal.id} className="space-y-2 animate-in slide-in-from-right hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200" style={{ animationDelay: `${index * 50}ms` }}>
                       <div className="flex items-center justify-between">
                         <p className="text-sm font-medium">{goal.name}</p>
                         <span className="text-xs text-muted-foreground">
@@ -226,8 +227,8 @@ export default async function DashboardPage() {
                 })}
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <Target className="h-12 w-12 text-muted-foreground/50 mb-4" />
+              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
+                <Target className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
                 <p className="text-muted-foreground">No goals yet</p>
                 <p className="text-sm text-muted-foreground">
                   Set a savings goal to track your progress

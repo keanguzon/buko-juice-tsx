@@ -1,14 +1,37 @@
--- Supabase SQL Schema for Buko Juice Money Tracker
+-- =====================================================
+-- BUKO JUICE MONEY TRACKER - COMPLETE DATABASE RESET
+-- =====================================================
+-- This script will DROP ALL existing tables and recreate them from scratch
+-- WARNING: This will delete ALL data in your database!
 -- Run this in your Supabase SQL Editor
 
--- Enable UUID generation (pgcrypto is the recommended/default on Supabase)
-CREATE EXTENSION IF NOT EXISTS "pgcrypto";
+-- =====================================================
+-- STEP 1: DROP ALL EXISTING TABLES
+-- =====================================================
+DROP TABLE IF EXISTS public.transactions CASCADE;
+DROP TABLE IF EXISTS public.budgets CASCADE;
+DROP TABLE IF EXISTS public.goals CASCADE;
+DROP TABLE IF EXISTS public.accounts CASCADE;
+DROP TABLE IF EXISTS public.categories CASCADE;
+DROP TABLE IF EXISTS public.user_preferences CASCADE;
+DROP TABLE IF EXISTS public.users CASCADE;
 
--- Optional: uuid-ossp (only needed if you use uuid_generate_v4())
+-- Drop the trigger and function
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+DROP FUNCTION IF EXISTS public.handle_new_user();
+
+-- =====================================================
+-- STEP 2: ENABLE EXTENSIONS
+-- =====================================================
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
+-- =====================================================
+-- STEP 3: CREATE TABLES
+-- =====================================================
+
 -- Users table (extends Supabase auth.users)
-CREATE TABLE IF NOT EXISTS public.users (
+CREATE TABLE public.users (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT UNIQUE NOT NULL,
   username TEXT UNIQUE NOT NULL,
@@ -20,7 +43,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 );
 
 -- Accounts table
-CREATE TABLE IF NOT EXISTS public.accounts (
+CREATE TABLE public.accounts (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -30,12 +53,15 @@ CREATE TABLE IF NOT EXISTS public.accounts (
   color TEXT,
   icon TEXT,
   is_active BOOLEAN DEFAULT TRUE,
+  is_savings BOOLEAN DEFAULT FALSE,
+  interest_rate DECIMAL(5, 2) DEFAULT 0,
+  include_in_networth BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Categories table
-CREATE TABLE IF NOT EXISTS public.categories (
+CREATE TABLE public.categories (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES public.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -47,7 +73,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
 );
 
 -- Transactions table
-CREATE TABLE IF NOT EXISTS public.transactions (
+CREATE TABLE public.transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   account_id UUID NOT NULL REFERENCES public.accounts(id) ON DELETE CASCADE,
@@ -62,7 +88,7 @@ CREATE TABLE IF NOT EXISTS public.transactions (
 );
 
 -- Budgets table
-CREATE TABLE IF NOT EXISTS public.budgets (
+CREATE TABLE public.budgets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   category_id UUID NOT NULL REFERENCES public.categories(id) ON DELETE CASCADE,
@@ -75,7 +101,7 @@ CREATE TABLE IF NOT EXISTS public.budgets (
 );
 
 -- Goals table
-CREATE TABLE IF NOT EXISTS public.goals (
+CREATE TABLE public.goals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -90,7 +116,7 @@ CREATE TABLE IF NOT EXISTS public.goals (
 );
 
 -- User preferences table
-CREATE TABLE IF NOT EXISTS public.user_preferences (
+CREATE TABLE public.user_preferences (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID UNIQUE NOT NULL REFERENCES public.users(id) ON DELETE CASCADE,
   currency TEXT DEFAULT 'PHP',
@@ -101,24 +127,20 @@ CREATE TABLE IF NOT EXISTS public.user_preferences (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Ensure UUID defaults are correct even if tables already existed
-ALTER TABLE IF EXISTS public.accounts ALTER COLUMN id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS public.categories ALTER COLUMN id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS public.transactions ALTER COLUMN id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS public.budgets ALTER COLUMN id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS public.goals ALTER COLUMN id SET DEFAULT gen_random_uuid();
-ALTER TABLE IF EXISTS public.user_preferences ALTER COLUMN id SET DEFAULT gen_random_uuid();
+-- =====================================================
+-- STEP 4: CREATE INDEXES
+-- =====================================================
+CREATE INDEX idx_accounts_user_id ON public.accounts(user_id);
+CREATE INDEX idx_categories_user_id ON public.categories(user_id);
+CREATE INDEX idx_transactions_user_id ON public.transactions(user_id);
+CREATE INDEX idx_transactions_account_id ON public.transactions(account_id);
+CREATE INDEX idx_transactions_date ON public.transactions(date);
+CREATE INDEX idx_budgets_user_id ON public.budgets(user_id);
+CREATE INDEX idx_goals_user_id ON public.goals(user_id);
 
--- Indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
-CREATE INDEX IF NOT EXISTS idx_categories_user_id ON public.categories(user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
-CREATE INDEX IF NOT EXISTS idx_transactions_date ON public.transactions(date);
-CREATE INDEX IF NOT EXISTS idx_budgets_user_id ON public.budgets(user_id);
-CREATE INDEX IF NOT EXISTS idx_goals_user_id ON public.goals(user_id);
-
--- Row Level Security (RLS) policies
+-- =====================================================
+-- STEP 5: ENABLE ROW LEVEL SECURITY
+-- =====================================================
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.accounts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
@@ -127,32 +149,9 @@ ALTER TABLE public.budgets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.goals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist
-DROP POLICY IF EXISTS "Users can view own profile" ON public.users;
-DROP POLICY IF EXISTS "Users can update own profile" ON public.users;
-DROP POLICY IF EXISTS "Users can view own accounts" ON public.accounts;
-DROP POLICY IF EXISTS "Users can insert own accounts" ON public.accounts;
-DROP POLICY IF EXISTS "Users can update own accounts" ON public.accounts;
-DROP POLICY IF EXISTS "Users can delete own accounts" ON public.accounts;
-DROP POLICY IF EXISTS "Users can view own and default categories" ON public.categories;
-DROP POLICY IF EXISTS "Users can insert own categories" ON public.categories;
-DROP POLICY IF EXISTS "Users can update own categories" ON public.categories;
-DROP POLICY IF EXISTS "Users can delete own categories" ON public.categories;
-DROP POLICY IF EXISTS "Users can view own transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Users can insert own transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Users can update own transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Users can delete own transactions" ON public.transactions;
-DROP POLICY IF EXISTS "Users can view own budgets" ON public.budgets;
-DROP POLICY IF EXISTS "Users can insert own budgets" ON public.budgets;
-DROP POLICY IF EXISTS "Users can update own budgets" ON public.budgets;
-DROP POLICY IF EXISTS "Users can delete own budgets" ON public.budgets;
-DROP POLICY IF EXISTS "Users can view own goals" ON public.goals;
-DROP POLICY IF EXISTS "Users can insert own goals" ON public.goals;
-DROP POLICY IF EXISTS "Users can update own goals" ON public.goals;
-DROP POLICY IF EXISTS "Users can delete own goals" ON public.goals;
-DROP POLICY IF EXISTS "Users can view own preferences" ON public.user_preferences;
-DROP POLICY IF EXISTS "Users can insert own preferences" ON public.user_preferences;
-DROP POLICY IF EXISTS "Users can update own preferences" ON public.user_preferences;
+-- =====================================================
+-- STEP 6: CREATE RLS POLICIES
+-- =====================================================
 
 -- Users policies
 CREATE POLICY "Users can view own profile" ON public.users
@@ -236,6 +235,10 @@ CREATE POLICY "Users can insert own preferences" ON public.user_preferences
 CREATE POLICY "Users can update own preferences" ON public.user_preferences
   FOR UPDATE USING (auth.uid() = user_id);
 
+-- =====================================================
+-- STEP 7: CREATE TRIGGER FOR NEW USER REGISTRATION
+-- =====================================================
+
 -- Function to handle new user registration
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
@@ -265,12 +268,13 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Trigger for new user registration
-DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Insert default categories
+-- =====================================================
+-- STEP 8: INSERT DEFAULT CATEGORIES
+-- =====================================================
 INSERT INTO public.categories (name, type, icon, color, is_default) VALUES
   ('Salary', 'income', 'Banknote', '#22c55e', TRUE),
   ('Freelance', 'income', 'Laptop', '#3b82f6', TRUE),
@@ -288,3 +292,9 @@ INSERT INTO public.categories (name, type, icon, color, is_default) VALUES
   ('Groceries', 'expense', 'ShoppingCart', '#84cc16', TRUE),
   ('Other Expense', 'expense', 'Minus', '#6b7280', TRUE)
 ON CONFLICT DO NOTHING;
+
+-- =====================================================
+-- DATABASE RESET COMPLETE!
+-- =====================================================
+-- Your database has been completely reset and is ready to use.
+-- You can now register new users and start using the application.

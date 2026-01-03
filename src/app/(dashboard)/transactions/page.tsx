@@ -1,45 +1,63 @@
-import { createClient } from "@/lib/supabase/server";
+"use client";
+
+import { useState, useEffect } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Filter } from "lucide-react";
+import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 
-export default async function TransactionsPage() {
+export default function TransactionsPage() {
   const supabase = createClient();
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
+  useEffect(() => {
+    loadTransactions();
+  }, []);
 
-  const { data: transactions } = await supabase
-    .from("transactions")
-    .select("*, category:categories(*), account:accounts(*)")
-    .eq("user_id", session?.user.id)
-    .order("date", { ascending: false })
-    .limit(50);
+  const loadTransactions = async () => {
+    setIsLoading(true);
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+
+    if (session?.user?.id) {
+      const { data } = await supabase
+        .from("transactions")
+        .select("*, category:categories(*), account:accounts(*)")
+        .eq("user_id", session.user.id)
+        .order("date", { ascending: false })
+        .limit(50);
+
+      setTransactions(data || []);
+    }
+    setIsLoading(false);
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
-          <p className="text-muted-foreground">
-            View and manage your transactions
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline">
-            <Filter className="mr-2 h-4 w-4" />
-            Filter
-          </Button>
-          <a href="/transactions/new">
-            <Button>
+    <>
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
+            <p className="text-muted-foreground">
+              View and manage your transactions
+            </p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="outline" className="transition-all hover:scale-105">
+              <Filter className="mr-2 h-4 w-4" />
+              Filter
+            </Button>
+            <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105 hover:shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
-          </a>
+          </div>
         </div>
-      </div>
 
       <Card>
         <CardHeader>
@@ -47,16 +65,17 @@ export default async function TransactionsPage() {
           <CardDescription>Your complete transaction history</CardDescription>
         </CardHeader>
         <CardContent>
-          {transactions && transactions.length > 0 ? (
+          {!isLoading && transactions && transactions.length > 0 ? (
             <div className="space-y-4">
-              {transactions.map((transaction) => (
+              {transactions.map((transaction, index) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md animate-in slide-in-from-left"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-center space-x-4">
                     <div
-                      className={`p-3 rounded-full ${
+                      className={`p-3 rounded-full transition-all duration-200 ${
                         transaction.type === "income"
                           ? "bg-green-500/10"
                           : transaction.type === "expense"
@@ -103,23 +122,35 @@ export default async function TransactionsPage() {
                 </div>
               ))}
             </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-12">
+          ) : !isLoading ? (
+            <div className="flex flex-col items-center justify-center py-12 animate-in fade-in duration-500">
               <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-lg font-medium">No transactions yet</p>
               <p className="text-sm text-muted-foreground mb-4">
                 Start tracking by adding your first transaction
               </p>
-              <a href="/transactions/new">
-                <Button>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Transaction
-                </Button>
-              </a>
+              <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
+                <Plus className="mr-2 h-4 w-4" />
+                Add Transaction
+              </Button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
             </div>
           )}
         </CardContent>
       </Card>
     </div>
+
+    {/* Add Transaction Modal */}
+    <AddTransactionModal
+      isOpen={isModalOpen}
+      onClose={() => {
+        setIsModalOpen(false);
+        loadTransactions();
+      }}
+    />
+  </>
   );
 }

@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import animations */
+@import './animations.css';
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -54,27 +57,22 @@
     @apply border-border;
   }
 
-  /* Smooth theme transitions using CSS variables */
-  html.theme-transition, html.theme-transition * {
-    transition-property: background-color, color, border-color, box-shadow, fill, stroke, transform, opacity;
-    transition-duration: 300ms;
-    transition-timing-function: cubic-bezier(.16,.8,.29,1);
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    html.theme-transition, html.theme-transition * {
-      transition: none !important;
-      animation: none !important;
-    }
-  }
-
+  /* Smooth theme transitions */
   body {
     @apply bg-background text-foreground;
+    transition: background-color 0.5s ease-in-out, color 0.5s ease-in-out;
+  }
+
+  /* Apply smooth transition to all elements for theme change */
+  *, *::before, *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: ease-in-out;
+    transition-duration: 0.5s;
   }
 
   /* Subtle card and button transitions when interacting */
   .card, .btn, .button {
-    transition: transform .18s ease, box-shadow .18s ease, background-color .2s ease, color .2s ease;
+    transition: transform .18s ease, box-shadow .18s ease, background-color 0.5s ease, color 0.5s ease;
     will-change: transform, box-shadow;
   }
 
