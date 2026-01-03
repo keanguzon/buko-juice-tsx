@@ -10,6 +10,7 @@ import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 
 export default function TransactionsPage() {
   const supabase = createClient();
+  const sb = supabase as any;
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -26,7 +27,7 @@ export default function TransactionsPage() {
     } = await supabase.auth.getSession();
 
     if (session?.user?.id) {
-      const { data } = await supabase
+      const { data } = await sb
         .from("transactions")
         .select("*, category:categories(*), account:accounts(*)")
         .eq("user_id", session.user.id)
