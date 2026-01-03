@@ -129,7 +129,10 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       setDescription("");
       setDate(new Date().toISOString().slice(0, 10));
       
-      onClose();
+      // Small delay to ensure DB has updated before closing
+      setTimeout(() => {
+        onClose();
+      }, 100);
     } catch (err) {
       toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
     } finally {
