@@ -53,17 +53,20 @@ export default function TransactionsPage() {
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between">
+        <div className="space-y-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
             <p className="text-muted-foreground">
               View and manage your transactions
             </p>
           </div>
-          <div className="flex gap-2">
-            <div className="flex items-center gap-2">
+          
+          {/* Filter and Add buttons - stacked on mobile, inline on desktop */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2">
               <Button
                 variant={filter === "all" ? "default" : "outline"}
+                size="sm"
                 className="transition-all hover:scale-105"
                 onClick={() => setFilter("all")}
               >
@@ -71,6 +74,7 @@ export default function TransactionsPage() {
               </Button>
               <Button
                 variant={filter === "expense" ? "default" : "outline"}
+                size="sm"
                 className="transition-all hover:scale-105"
                 onClick={() => setFilter("expense")}
               >
@@ -78,6 +82,7 @@ export default function TransactionsPage() {
               </Button>
               <Button
                 variant={filter === "income" ? "default" : "outline"}
+                size="sm"
                 className="transition-all hover:scale-105"
                 onClick={() => setFilter("income")}
               >
@@ -85,13 +90,14 @@ export default function TransactionsPage() {
               </Button>
               <Button
                 variant={filter === "transfer" ? "default" : "outline"}
+                size="sm"
                 className="transition-all hover:scale-105"
                 onClick={() => setFilter("transfer")}
               >
                 Transfer
               </Button>
             </div>
-            <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105 hover:shadow-lg">
+            <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto transition-all hover:scale-105 hover:shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
