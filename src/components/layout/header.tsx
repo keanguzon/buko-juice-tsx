@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, LogOut, Moon, Settings, Sun, User as UserIcon } from "lucide-react";
+import { Bell, LogOut, Menu, Moon, Settings, Sun, User as UserIcon } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
 interface HeaderProps {
@@ -23,9 +23,10 @@ interface HeaderProps {
     name?: string;
     avatar_url?: string;
   } | null;
+  onMenuClick?: () => void;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const supabase = createClient();
   const { toast } = useToast();
@@ -46,14 +47,23 @@ export function Header({ user }: HeaderProps) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-6 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="flex items-center gap-4">
-        <h1 className="text-lg font-semibold md:text-xl">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60 md:px-6">
+      <div className="flex items-center gap-2 md:gap-4">
+        {/* Hamburger menu - mobile only */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={onMenuClick}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <h1 className="text-sm font-semibold md:text-lg lg:text-xl">
           Welcome back{user?.name ? `, ${user.name.split(" ")[0]}` : ""}!
         </h1>
       </div>
 
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Theme toggle */}
         <Button
           variant="ghost"
@@ -73,8 +83,8 @@ export function Header({ user }: HeaderProps) {
           <span className="sr-only">Toggle theme</span>
         </Button>
 
-        {/* Notifications */}
-        <Button variant="ghost" size="icon">
+        {/* Notifications - hidden on small mobile */}
+        <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
           <Bell className="h-5 w-5" />
           <span className="sr-only">Notifications</span>
         </Button>

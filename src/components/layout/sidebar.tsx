@@ -13,6 +13,7 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -26,27 +27,53 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function Sidebar() {
+interface SidebarProps {
+  isOpen?: boolean;
+  onClose?: () => void;
+}
+
+export function Sidebar({ isOpen = false, onClose }: SidebarProps) {
   const pathname = usePathname();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 h-screen border-r bg-card transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+    <>
+      {/* Mobile overlay */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={onClose}
+        />
       )}
-    >
-      <div className="flex h-full flex-col">
-        {/* Logo */}
-        <div className="flex h-16 items-center border-b px-4">
-          <Link href="/dashboard" className="flex items-center space-x-2">
-            <Image src="/logos/main-logo.png" alt="Buko Juice Logo" width={32} height={32} className="h-8 w-8 flex-shrink-0" />
-            {!isCollapsed && (
-              <span className="text-xl font-bold">Buko Juice</span>
-            )}
-          </Link>
-        </div>
+
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-50 h-screen border-r bg-card transition-all duration-300",
+          isCollapsed ? "w-16" : "w-64",
+          // Mobile: hide by default, show when isOpen
+          "lg:translate-x-0",
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        )}
+      >
+        <div className="flex h-full flex-col">
+          {/* Logo + Close button on mobile */}
+          <div className="flex h-16 items-center justify-between border-b px-4">
+            <Link href="/dashboard" className="flex items-center space-x-2" onClick={onClose}>
+              <Image src="/logos/main-logo.png" alt="Buko Juice Logo" width={32} height={32} className="h-8 w-8 flex-shrink-0" />
+              {!isCollapsed && (
+                <span className="text-xl font-bold">Buko Juice</span>
+              )}
+            </Link>
+            {/* Close button - mobile only */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={onClose}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
 
         {/* Navigation */}
         <nav className="flex-1 space-y-1 p-2">
@@ -56,6 +83,7 @@ export function Sidebar() {
               <Link
                 key={item.href}
                 href={item.href}
+                onClick={onClose}
                 className={cn(
                   "flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors",
                   isActive
@@ -70,8 +98,8 @@ export function Sidebar() {
           })}
         </nav>
 
-        {/* Collapse toggle */}
-        <div className="border-t p-2">
+        {/* Collapse toggle - desktop only */}
+        <div className="hidden border-t p-2 lg:block">
           <Button
             variant="ghost"
             size="sm"
@@ -87,5 +115,6 @@ export function Sidebar() {
         </div>
       </div>
     </aside>
+    </>
   );
 }
