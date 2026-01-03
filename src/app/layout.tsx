@@ -28,7 +28,7 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
-          disableTransitionOnChange
+          disableTransitionOnChange={false}
         >
           <LoadingBar />
           <div className="min-h-screen animate-fade-in">{children}</div>
