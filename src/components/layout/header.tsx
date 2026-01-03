@@ -75,11 +75,6 @@ export function Header({ user, onMenuClick }: HeaderProps) {
           <span className="sr-only">Toggle theme</span>
         </Button>
 
-        {/* Notifications - hidden on small mobile */}
-        <Button variant="ghost" size="icon" className="hidden sm:inline-flex">
-          <Bell className="h-5 w-5" />
-          <span className="sr-only">Notifications</span>
-        </Button>
 
         {/* User menu */}
         <DropdownMenu>

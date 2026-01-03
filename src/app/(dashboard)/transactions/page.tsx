@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
+import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Trash2 } from "lucide-react";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import { useToast } from "@/components/ui/use-toast";
 
@@ -18,10 +18,63 @@ export default function TransactionsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
   const [refreshKey, setRefreshKey] = useState(0);
+  const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     loadTransactions();
   }, [refreshKey]);
+
+  const deleteTransaction = async (transaction: any) => {
+    setIsDeleting(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) {
+        toast({ title: "Not signed in", description: "You must be signed in to delete transactions", variant: "destructive" });
+        return;
+      }
+
+      const amt = Number(transaction.amount);
+
+      // Delete the transaction
+      const { error: deleteError } = await sb
+        .from("transactions")
+        .delete()
+        .eq("id", transaction.id)
+        .eq("user_id", session.user.id);
+
+      if (deleteError) {
+        toast({ title: "Error", description: deleteError.message, variant: "destructive" });
+        return;
+      }
+
+      // Revert balance based on transaction type
+      if (transaction.type === "income") {
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
+        const newBal = Number(acc?.balance || 0) - amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", transaction.account_id);
+      } else if (transaction.type === "expense") {
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
+        const newBal = Number(acc?.balance || 0) + amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", transaction.account_id);
+      } else if (transaction.type === "transfer") {
+        const { data: src } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
+        const { data: dst } = await sb.from("accounts").select("balance").eq("id", transaction.transfer_to_account_id).single();
+        if (src && dst) {
+          await sb.from("accounts").update({ balance: Number(src.balance) + amt }).eq("id", transaction.account_id);
+          await sb.from("accounts").update({ balance: Number(dst.balance) - amt }).eq("id", transaction.transfer_to_account_id);
+        }
+      }
+
+      toast({ title: "Transaction deleted", description: "Transaction and balance have been reverted." });
+      setDeleteConfirm(null);
+      setRefreshKey(prev => prev + 1);
+    } catch (err) {
+      toast({ title: "Error", description: "An unexpected error occurred", variant: "destructive" });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const loadTransactions = async () => {
     setIsLoading(true);
@@ -176,22 +229,34 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={`font-semibold ${
-                        transaction.type === "income"
-                          ? "text-green-500"
-                          : transaction.type === "expense"
-                          ? "text-red-500"
-                          : "text-blue-500"
-                      }`}
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p
+                        className={`font-semibold ${
+                          transaction.type === "income"
+                            ? "text-green-500"
+                            : transaction.type === "expense"
+                            ? "text-red-500"
+                            : "text-blue-500"
+                        }`}
+                      >
+                        {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
+                        {formatCurrency(Number(transaction.amount))}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {formatDate(transaction.date)}
+                      </p>
+                    </div>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirm(transaction);
+                      }}
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700"
+                      title="Delete transaction"
                     >
-                      {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                      {formatCurrency(Number(transaction.amount))}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {formatDate(transaction.date)}
-                    </p>
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
               ))}
@@ -216,6 +281,45 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
     </div>
+
+    {/* Delete Confirmation Modal */}
+    {deleteConfirm && (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+        onClick={() => setDeleteConfirm(null)}
+      >
+        <div
+          className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-6">
+            <h3 className="text-xl font-semibold mb-2 text-red-500">Delete Transaction?</h3>
+            <p className="text-muted-foreground mb-6">
+              This will remove the transaction and revert the balance. This action cannot be undone.
+            </p>
+            <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg mb-6 text-sm">
+              <p className="font-medium">{deleteConfirm.description || deleteConfirm.category?.name || "Transaction"}</p>
+              <p className="text-muted-foreground">{formatCurrency(Number(deleteConfirm.amount))} • {formatDate(deleteConfirm.date)}</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => deleteTransaction(deleteConfirm)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+              >
+                {isDeleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* Add Transaction Modal */}
     <AddTransactionModal

@@ -24,18 +24,96 @@ export default function SettingsPage() {
   const [avatarUrl, setAvatarUrl] = useState("");
 
   const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordMode, setPasswordMode] = useState<"password" | "oauth">("password");
+  const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
+  const openPasswordModal = async () => {
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+
+      const providersFromAppMeta = user?.app_metadata?.providers;
+      const provider = user?.app_metadata?.provider;
+      const providers = Array.isArray(providersFromAppMeta)
+        ? providersFromAppMeta
+        : provider
+        ? [provider]
+        : [];
+
+      const identityProviders = (user as any)?.identities?.map((i: any) => i?.provider).filter(Boolean) ?? [];
+      const allProviders = Array.from(new Set([...(providers as string[]), ...identityProviders]));
+
+      const hasPassword = allProviders.includes("email");
+      setPasswordMode(hasPassword ? "password" : "oauth");
+    } catch {
+      // Default to password mode; if it fails, the submit handler will show an error.
+      setPasswordMode("password");
+    }
+
+    setShowPasswordModal(true);
+  };
+
+  const sendPasswordSetupLink = async () => {
+    setSendingPasswordLink(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const email = session?.user?.email;
+      if (!email) throw new Error("No email found for this account");
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Email sent!",
+        description: "Check your inbox for the password setup link.",
+      });
+      setShowPasswordModal(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
       toast({
         title: "Error",
-        description: "Passwords do not match",
+        description: error.message || "Failed to send password setup link",
+        variant: "destructive",
+      });
+    } finally {
+      setSendingPasswordLink(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (passwordMode === "oauth") {
+      // OAuth users don't have a current password; they must set one via email link.
+      await sendPasswordSetupLink();
+      return;
+    }
+
+    // Validate current password
+    if (!currentPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter your current password",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate new password
+    if (!newPassword) {
+      toast({
+        title: "Error",
+        description: "Please enter a new password",
         variant: "destructive",
       });
       return;
@@ -50,8 +128,42 @@ export default function SettingsPage() {
       return;
     }
 
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (currentPassword === newPassword) {
+      toast({
+        title: "Error",
+        description: "New password must be different from current password",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setChangingPassword(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.email) {
+        throw new Error("Not authenticated");
+      }
+
+      // Reauthenticate with current password
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: session.user.email,
+        password: currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error("Current password is incorrect");
+      }
+
+      // Update password
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
@@ -63,6 +175,7 @@ export default function SettingsPage() {
         description: "Password changed successfully",
       });
       setShowPasswordModal(false);
+      setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
     } catch (error: any) {
@@ -380,7 +493,7 @@ export default function SettingsPage() {
               <Button 
                 variant="outline" 
                 className="w-full sm:w-auto"
-                onClick={() => setShowPasswordModal(true)}
+                onClick={openPasswordModal}
               >
                 Change Password
               </Button>
@@ -397,7 +510,12 @@ export default function SettingsPage() {
             {showPasswordModal && (
               <div
                 className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
-                onClick={() => setShowPasswordModal(false)}
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setCurrentPassword("");
+                  setNewPassword("");
+                  setConfirmPassword("");
+                }}
               >
                 <div
                   className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
@@ -405,43 +523,68 @@ export default function SettingsPage() {
                 >
                   <div className="p-6">
                     <h3 className="text-xl font-semibold mb-4">Change Password</h3>
-                    <div className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="newPassword">New Password</Label>
-                      <Input
-                        id="newPassword"
-                        type="password"
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        placeholder="Enter new password"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirmPassword">Confirm Password</Label>
-                      <Input
-                        id="confirmPassword"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        placeholder="Confirm new password"
-                      />
-                    </div>
-                  </div>
+                    {passwordMode === "password" ? (
+                      <div className="space-y-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="currentPassword">Current Password</Label>
+                          <Input
+                            id="currentPassword"
+                            type="password"
+                            value={currentPassword}
+                            onChange={(e) => setCurrentPassword(e.target.value)}
+                            placeholder="Enter current password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="newPassword">New Password</Label>
+                          <Input
+                            id="newPassword"
+                            type="password"
+                            value={newPassword}
+                            onChange={(e) => setNewPassword(e.target.value)}
+                            placeholder="Enter new password"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="confirmPassword">Confirm Password</Label>
+                          <Input
+                            id="confirmPassword"
+                            type="password"
+                            value={confirmPassword}
+                            onChange={(e) => setConfirmPassword(e.target.value)}
+                            placeholder="Confirm new password"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-muted-foreground">
+                          You signed in using Google/Facebook, so you don’t have a password yet. To set one, we’ll send a password setup link to your email.
+                        </p>
+                      </div>
+                    )}
                   <div className="flex gap-3 mt-6">
                     <Button
                       variant="outline"
                       className="flex-1"
-                      onClick={() => setShowPasswordModal(false)}
+                      onClick={() => {
+                        setShowPasswordModal(false);
+                        setCurrentPassword("");
+                        setNewPassword("");
+                        setConfirmPassword("");
+                      }}
                     >
                       Cancel
                     </Button>
                     <Button
                       className="flex-1"
                       onClick={handleChangePassword}
-                      disabled={changingPassword}
+                      disabled={changingPassword || sendingPasswordLink}
                     >
-                      {changingPassword && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Save Password
+                      {(changingPassword || sendingPasswordLink) && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      {passwordMode === "password" ? "Change Password" : "Send Link"}
                     </Button>
                   </div>
                   </div>

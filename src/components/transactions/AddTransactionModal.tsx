@@ -75,7 +75,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       }
 
       const amt = Number(amount);
-      if (!accountId || !amt) {
+      if (!accountId || !Number.isFinite(amt) || amt <= 0) {
         toast({ title: "Missing fields", description: "Please select account and amount", variant: "destructive" });
         return;
       }
@@ -83,6 +83,50 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       if (accounts.length === 0) {
         toast({ title: "No accounts", description: "Please create an account first", variant: "destructive" });
         return;
+      }
+
+      // Prevent negative balances (no overdraft)
+      if (type === "expense" || type === "transfer") {
+        const { data: srcAcc, error: srcErr } = await sb
+          .from("accounts")
+          .select("id, name, balance")
+          .eq("id", accountId)
+          .single();
+
+        if (srcErr) {
+          toast({ title: "Error", description: srcErr.message, variant: "destructive" });
+          return;
+        }
+
+        const currentBal = Number(srcAcc?.balance || 0);
+        const nextBal = currentBal - amt;
+        if (nextBal < 0) {
+          toast({
+            title: "Not enough balance",
+            description: `Not enough money in ${srcAcc?.name || "this account"}. Available: ₱${currentBal.toFixed(2)}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (type === "transfer") {
+          if (!transferToAccountId) {
+            toast({
+              title: "Missing fields",
+              description: "Please select a destination account",
+              variant: "destructive",
+            });
+            return;
+          }
+          if (transferToAccountId === accountId) {
+            toast({
+              title: "Invalid transfer",
+              description: "Source and destination accounts must be different",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
       }
 
       // Insert transaction
