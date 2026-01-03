@@ -50,8 +50,6 @@ export default function TransactionsPage() {
       : filter === "income"
       ? "Income"
       : "Transfer";
-      ? "Income"
-      : "Transfer";
 
   return (
     <>
