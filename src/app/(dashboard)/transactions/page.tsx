@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight } from "lucide-react";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
+import { useToast } from "@/components/ui/use-toast";
 
 export default function TransactionsPage() {
   const supabase = createClient();
   const sb = supabase as any;
+  const { toast } = useToast();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -28,14 +30,26 @@ export default function TransactionsPage() {
     } = await supabase.auth.getSession();
 
     if (session?.user?.id) {
-      const { data } = await sb
+      const { data, error } = await sb
         .from("transactions")
-        .select("*, category:categories(*), account:accounts(*)")
+        .select(
+          "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name)"
+        )
         .eq("user_id", session.user.id)
         .order("date", { ascending: false })
         .limit(50);
 
-      setTransactions(data || []);
+      if (error) {
+        console.error("Failed to load transactions", error);
+        toast({
+          title: "Failed to load transactions",
+          description: error.message,
+          variant: "destructive",
+        });
+        setTransactions([]);
+      } else {
+        setTransactions(data || []);
+      }
     }
     setIsLoading(false);
   };

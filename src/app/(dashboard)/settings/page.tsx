@@ -396,15 +396,16 @@ export default function SettingsPage() {
             {/* Change Password Modal */}
             {showPasswordModal && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200 min-h-screen overflow-y-auto"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
                 onClick={() => setShowPasswordModal(false)}
               >
                 <div
-                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6"
+                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h3 className="text-xl font-semibold mb-4">Change Password</h3>
-                  <div className="space-y-4">
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-4">Change Password</h3>
+                    <div className="space-y-4">
                     <div className="space-y-2">
                       <Label htmlFor="newPassword">New Password</Label>
                       <Input
@@ -443,6 +444,7 @@ export default function SettingsPage() {
                       Save Password
                     </Button>
                   </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -450,15 +452,16 @@ export default function SettingsPage() {
             {/* Delete Account Modal */}
             {showDeleteModal && (
               <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 animate-in fade-in duration-200 min-h-screen overflow-y-auto"
+                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
                 onClick={() => setShowDeleteModal(false)}
               >
                 <div
-                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md shadow-xl animate-in slide-in-from-bottom-4 duration-300 p-6"
+                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
-                  <p className="text-muted-foreground mb-6">
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
+                    <p className="text-muted-foreground mb-6">
                     Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
                   </p>
                   <div className="space-y-2 mb-6">
@@ -488,6 +491,7 @@ export default function SettingsPage() {
                       {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                       Delete
                     </Button>
+                  </div>
                   </div>
                 </div>
               </div>
