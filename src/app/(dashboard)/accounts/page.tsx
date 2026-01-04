@@ -65,14 +65,23 @@ export default function AccountsPage() {
   return (
     <>
       <div className="space-y-6 animate-in fade-in duration-500">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
-            <p className="text-muted-foreground">
-              Manage your financial accounts
-            </p>
+        {/* Header - Redesigned for Mobile */}
+        <div className="space-y-3">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div className="space-y-1">
+              <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
+              <p className="text-muted-foreground">
+                Manage your financial accounts
+              </p>
+            </div>
+            {/* Button visible only on desktop */}
+            <Button onClick={() => setIsModalOpen(true)} className="hidden sm:flex transition-all hover:scale-105 hover:shadow-lg">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Account
+            </Button>
           </div>
-          <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105 hover:shadow-lg">
+          {/* Button visible only on mobile - below description */}
+          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:hidden transition-all hover:scale-105 hover:shadow-lg">
             <Plus className="mr-2 h-4 w-4" />
             Add Account
           </Button>

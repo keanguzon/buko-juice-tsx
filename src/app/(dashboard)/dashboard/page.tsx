@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/utils";
 import {
   ArrowDownLeft,
@@ -9,7 +10,9 @@ import {
   TrendingUp,
   Wallet,
   ArrowLeftRight,
+  ArrowRight,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -42,13 +45,13 @@ export default function DashboardPage() {
           .eq("is_active", true);
         setAccounts(accountsData ?? []);
 
-        // Get recent transactions
+        // Get recent transactions - ONLY LATEST 3
         const { data: transactionsData } = await supabase
           .from("transactions")
           .select("*, category:categories(*), account:accounts(*)")
           .eq("user_id", session.user.id)
           .order("date", { ascending: false })
-          .limit(5);
+          .limit(3);
         setTransactions(transactionsData ?? []);
 
         // This month's income/expenses
@@ -142,11 +145,24 @@ export default function DashboardPage() {
         {/* Recent Transactions */}
         <Card className="col-span-7 animate-in slide-in-from-left duration-500 delay-500">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <ArrowLeftRight className="h-5 w-5" />
-              Recent Transactions
-            </CardTitle>
-            <CardDescription>Your latest financial activity</CardDescription>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ArrowLeftRight className="h-5 w-5" />
+                  Recent Transactions
+                </CardTitle>
+                <CardDescription>Your latest financial activity</CardDescription>
+              </div>
+              {/* View More Button */}
+              {transactions && transactions.length > 0 && (
+                <Link href="/transactions">
+                  <Button variant="outline" size="sm" className="transition-all hover:scale-105 hover:shadow-md">
+                    View All
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             {transactions && transactions.length > 0 ? (
@@ -198,6 +214,13 @@ export default function DashboardPage() {
                     </span>
                   </div>
                 ))}
+                {/* View More Link at Bottom */}
+                <Link href="/transactions">
+                  <Button variant="ghost" className="w-full transition-all hover:bg-secondary/80">
+                    See All Transactions
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </Link>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
