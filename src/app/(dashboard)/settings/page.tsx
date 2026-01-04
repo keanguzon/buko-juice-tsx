@@ -563,11 +563,71 @@ export default function SettingsPage() {
                 Delete Account
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      </div>
 
-            {/* Change Password Modal */}
-            {showPasswordModal && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+          onClick={() => {
+            setShowPasswordModal(false);
+            setCurrentPassword("");
+            setNewPassword("");
+            setConfirmPassword("");
+          }}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold mb-4">Change Password</h3>
+              {passwordMode === "password" ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currentPassword">Current Password</Label>
+                    <Input
+                      id="currentPassword"
+                      type="password"
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      placeholder="Enter current password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newPassword">New Password</Label>
+                    <Input
+                      id="newPassword"
+                      type="password"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      placeholder="Enter new password"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm Password</Label>
+                    <Input
+                      id="confirmPassword"
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm new password"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    You signed in using Google/Facebook, so you don’t have a password yet. To set one, we’ll send a password setup link to your email.
+                  </p>
+                </div>
+              )}
+            <div className="flex gap-3 mt-6">
+              <Button
+                variant="outline"
+                className="flex-1"
                 onClick={() => {
                   setShowPasswordModal(false);
                   setCurrentPassword("");
@@ -575,131 +635,71 @@ export default function SettingsPage() {
                   setConfirmPassword("");
                 }}
               >
-                <div
-                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold mb-4">Change Password</h3>
-                    {passwordMode === "password" ? (
-                      <div className="space-y-4">
-                        <div className="space-y-2">
-                          <Label htmlFor="currentPassword">Current Password</Label>
-                          <Input
-                            id="currentPassword"
-                            type="password"
-                            value={currentPassword}
-                            onChange={(e) => setCurrentPassword(e.target.value)}
-                            placeholder="Enter current password"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="newPassword">New Password</Label>
-                          <Input
-                            id="newPassword"
-                            type="password"
-                            value={newPassword}
-                            onChange={(e) => setNewPassword(e.target.value)}
-                            placeholder="Enter new password"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="confirmPassword">Confirm Password</Label>
-                          <Input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            placeholder="Confirm new password"
-                          />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <p className="text-sm text-muted-foreground">
-                          You signed in using Google/Facebook, so you don’t have a password yet. To set one, we’ll send a password setup link to your email.
-                        </p>
-                      </div>
-                    )}
-                  <div className="flex gap-3 mt-6">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => {
-                        setShowPasswordModal(false);
-                        setCurrentPassword("");
-                        setNewPassword("");
-                        setConfirmPassword("");
-                      }}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      className="flex-1"
-                      onClick={handleChangePassword}
-                      disabled={changingPassword || sendingPasswordLink}
-                    >
-                      {(changingPassword || sendingPasswordLink) && (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      )}
-                      {passwordMode === "password" ? "Change Password" : "Send Link"}
-                    </Button>
-                  </div>
-                  </div>
-                </div>
-              </div>
-            )}
+                Cancel
+              </Button>
+              <Button
+                className="flex-1"
+                onClick={handleChangePassword}
+                disabled={changingPassword || sendingPasswordLink}
+              >
+                {(changingPassword || sendingPasswordLink) && (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                )}
+                {passwordMode === "password" ? "Change Password" : "Send Link"}
+              </Button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
 
-            {/* Delete Account Modal */}
-            {showDeleteModal && (
-              <div
-                className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+      {/* Delete Account Modal */}
+      {showDeleteModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+          onClick={() => setShowDeleteModal(false)}
+        >
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
+              <p className="text-muted-foreground mb-6">
+              Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
+            </p>
+            <div className="space-y-2 mb-6">
+              <Label htmlFor="deletePassword">Password</Label>
+              <Input
+                id="deletePassword"
+                type="password"
+                value={deletePassword}
+                onChange={(e) => setDeletePassword(e.target.value)}
+                placeholder="Enter your password"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
                 onClick={() => setShowDeleteModal(false)}
               >
-                <div
-                  className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
-                    <p className="text-muted-foreground mb-6">
-                    Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
-                  </p>
-                  <div className="space-y-2 mb-6">
-                    <Label htmlFor="deletePassword">Password</Label>
-                    <Input
-                      id="deletePassword"
-                      type="password"
-                      value={deletePassword}
-                      onChange={(e) => setDeletePassword(e.target.value)}
-                      placeholder="Enter your password"
-                    />
-                  </div>
-                  <div className="flex gap-3">
-                    <Button
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => setShowDeleteModal(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      variant="destructive"
-                      className="flex-1"
-                      onClick={handleDeleteAccount}
-                      disabled={deletingAccount}
-                    >
-                      {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Delete
-                    </Button>
-                  </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                className="flex-1"
+                onClick={handleDeleteAccount}
+                disabled={deletingAccount}
+              >
+                {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Delete
+              </Button>
+            </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
