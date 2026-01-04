@@ -300,6 +300,8 @@ export default function SettingsPage() {
       if (!ensureRes.ok) {
         throw new Error(ensurePayload?.error || "Failed to initialize storage bucket");
       }
+      // If the server can't auto-create buckets (missing service role key), proceed anyway.
+      // Upload will still work if the bucket already exists.
 
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
@@ -312,7 +314,15 @@ export default function SettingsPage() {
         .from("profiles")
         .upload(filePath, file, { upsert: true });
 
-      if (uploadError) throw uploadError;
+      if (uploadError) {
+        const msg = (uploadError as any)?.message || String(uploadError);
+        if (/bucket not found/i.test(msg)) {
+          throw new Error(
+            "Profile picture bucket 'profiles' does not exist. Create it in Supabase Storage, or set SUPABASE_SERVICE_ROLE_KEY on the server to auto-create it."
+          );
+        }
+        throw uploadError;
+      }
 
       const { data: { publicUrl } } = supabase.storage
         .from("profiles")
