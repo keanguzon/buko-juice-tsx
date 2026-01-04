@@ -111,14 +111,14 @@ export default function DashboardPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent"></div>
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="animate-in fade-in slide-in-from-top duration-500">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div>
         <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground">
           Your financial overview at a glance.
@@ -127,8 +127,8 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat, index) => (
-          <Card key={stat.title} className="animate-in slide-in-from-bottom hover:shadow-lg hover:-translate-y-1 transition-all duration-200" style={{ animationDelay: `${index * 100}ms` }}>
+        {statCards.map((stat) => (
+          <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
@@ -143,7 +143,7 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         {/* Recent Transactions */}
-        <Card className="col-span-7 animate-in slide-in-from-left duration-500 delay-500">
+        <Card className="col-span-7">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
@@ -156,7 +156,7 @@ export default function DashboardPage() {
               {/* View More Button */}
               {transactions && transactions.length > 0 && (
                 <Link href="/transactions">
-                  <Button variant="outline" size="sm" className="transition-all hover:scale-105 hover:shadow-md">
+                  <Button variant="outline" size="sm">
                     View All
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
@@ -167,11 +167,10 @@ export default function DashboardPage() {
           <CardContent>
             {transactions && transactions.length > 0 ? (
               <div className="space-y-4">
-                {transactions.map((transaction, index) => (
+                {transactions.map((transaction) => (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between animate-in slide-in-from-left hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200"
-                    style={{ animationDelay: `${index * 50}ms` }}
+                    className="flex items-center justify-between hover:bg-secondary/50 p-2 rounded-lg transition-colors"
                   >
                     <div className="flex items-center space-x-4">
                       <div
@@ -216,15 +215,15 @@ export default function DashboardPage() {
                 ))}
                 {/* View More Link at Bottom */}
                 <Link href="/transactions">
-                  <Button variant="ghost" className="w-full transition-all hover:bg-secondary/80">
+                  <Button variant="ghost" className="w-full">
                     See All Transactions
                     <ArrowRight className="ml-2 h-4 w-4" />
                   </Button>
                 </Link>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-8 text-center animate-in fade-in zoom-in duration-300">
-                <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">No transactions yet</p>
                 <p className="text-sm text-muted-foreground">
                   Start by adding your first transaction

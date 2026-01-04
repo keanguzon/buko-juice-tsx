@@ -42,6 +42,8 @@ export default function SettingsPage() {
       const { data } = await supabase.auth.getUser();
       const user = data?.user;
 
+      const metaHasPassword = Boolean((user as any)?.user_metadata?.has_password);
+
       const providersFromAppMeta = user?.app_metadata?.providers;
       const provider = user?.app_metadata?.provider;
       const providers = Array.isArray(providersFromAppMeta)
@@ -53,7 +55,8 @@ export default function SettingsPage() {
       const identityProviders = (user as any)?.identities?.map((i: any) => i?.provider).filter(Boolean) ?? [];
       const allProviders = Array.from(new Set([...(providers as string[]), ...identityProviders]));
 
-      const hasPassword = allProviders.includes("email");
+      const providerSuggestsPassword = allProviders.includes("email");
+      const hasPassword = metaHasPassword || providerSuggestsPassword;
       setPasswordMode(hasPassword ? "password" : "oauth");
     } catch {
       // Default to password mode; if it fails, the submit handler will show an error.
@@ -169,6 +172,9 @@ export default function SettingsPage() {
       // Update password
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
+        data: {
+          has_password: true,
+        },
       });
 
       if (error) throw error;
@@ -288,6 +294,13 @@ export default function SettingsPage() {
     setUploading(true);
 
     try {
+      // Ensure storage bucket exists (fixes "Bucket not found")
+      const ensureRes = await fetch("/api/storage/ensure-profiles-bucket", { method: "POST" });
+      const ensurePayload = await ensureRes.json().catch(() => ({}));
+      if (!ensureRes.ok) {
+        throw new Error(ensurePayload?.error || "Failed to initialize storage bucket");
+      }
+
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
@@ -297,7 +310,7 @@ export default function SettingsPage() {
 
       const { error: uploadError } = await supabase.storage
         .from("profiles")
-        .upload(filePath, file);
+        .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
@@ -390,7 +403,7 @@ export default function SettingsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-green-500" />
       </div>
     );
   }

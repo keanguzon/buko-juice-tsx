@@ -119,6 +119,22 @@ export async function GET(request: Request) {
 
       return response;
     }
+
+    // Best-effort: mark OAuth / confirmed-email users as verified in public.users
+    try {
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+
+      const provider = (user as any)?.app_metadata?.provider;
+      const emailConfirmedAt = (user as any)?.email_confirmed_at;
+
+      const shouldVerify = Boolean(emailConfirmedAt) || (provider && provider !== "email");
+      if (shouldVerify && user?.id) {
+        await (supabase as any).from("users").update({ is_verified: true }).eq("id", user.id);
+      }
+    } catch {
+      // ignore verification update failures
+    }
   }
 
   const response = NextResponse.redirect(new URL(redirect, requestUrl.origin));
