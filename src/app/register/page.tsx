@@ -25,6 +25,9 @@ export default function RegisterPage() {
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedUsername = username.trim().toLowerCase();
     
     if (password !== confirmPassword) {
       toast({
@@ -56,14 +59,36 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
+      // Pre-check email/username (works for existing OAuth accounts too)
+      try {
+        const checkRes = await fetch("/api/auth/check-availability", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ email: normalizedEmail, username: normalizedUsername }),
+        });
+        const check = await checkRes.json().catch(() => ({}));
+        if (checkRes.ok) {
+          if (check?.emailExists) {
+            toast({ title: "Error", description: "Email already exists", variant: "destructive" });
+            return;
+          }
+          if (check?.usernameExists) {
+            toast({ title: "Error", description: "Username already exists", variant: "destructive" });
+            return;
+          }
+        }
+      } catch {
+        // If the check endpoint is unavailable, proceed with sign up.
+      }
+
       const { error } = await supabase.auth.signUp({
-        email,
+        email: normalizedEmail,
         password,
         options: {
           data: {
             name: name,
             full_name: name,
-            username: username,
+            username: normalizedUsername,
           },
           emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
@@ -71,6 +96,17 @@ export default function RegisterPage() {
 
       if (error) {
         console.error("Sign up error:", error);
+
+        const msg = (error.message || "").toLowerCase();
+        if (msg.includes("already registered") || msg.includes("user already registered")) {
+          toast({ title: "Error", description: "Email already exists", variant: "destructive" });
+          return;
+        }
+        if (msg.includes("username") || msg.includes("users_username") || msg.includes("users_username_key")) {
+          toast({ title: "Error", description: "Username already exists", variant: "destructive" });
+          return;
+        }
+
         toast({
           title: "Error",
           description:
@@ -87,7 +123,7 @@ export default function RegisterPage() {
         description: "Please check your email to verify your account.",
       });
       
-      router.push(`/verify-email?email=${encodeURIComponent(email)}`);
+      router.push(`/verify-email?email=${encodeURIComponent(normalizedEmail)}`);
     } catch (error) {
       toast({
         title: "Error",

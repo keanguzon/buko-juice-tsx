@@ -150,7 +150,7 @@ export default function AccountsPage() {
             </Card>
           ) : (
             <div className="col-span-full flex items-center justify-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500 motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
             </div>
           )}
         </div>

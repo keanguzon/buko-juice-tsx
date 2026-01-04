@@ -24,50 +24,6 @@ export default function TransactionsPage() {
   const [currency, setCurrency] = useState("PHP");
 
   useEffect(() => {
-    const loadTransactions = async () => {
-      setIsLoading(true);
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      let userCurrency = "PHP";
-      if (session?.user?.id) {
-        const { data: pref } = await supabase
-          .from("user_preferences")
-          .select("currency")
-          .eq("user_id", session.user.id)
-          .single();
-        if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
-        setCurrency(userCurrency);
-
-        const { data, error } = await sb
-          .from("transactions")
-          .select(
-            "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name)"
-          )
-          .eq("user_id", session.user.id)
-          .order("date", { ascending: false })
-          .limit(50);
-
-        if (error) {
-          console.error("Failed to load transactions", error);
-          toast({
-            title: "Failed to load transactions",
-            description: error.message,
-            variant: "destructive",
-          });
-          setTransactions([]);
-        } else {
-          setTransactions(data || []);
-        }
-      }
-      setIsLoading(false);
-    };
-    loadTransactions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
-
-  useEffect(() => {
     loadTransactions();
   }, [refreshKey]);
 
@@ -191,7 +147,6 @@ export default function TransactionsPage() {
               <Button
                 variant={filter === "all" ? "default" : "outline"}
                 size="sm"
-                className="transition-all hover:scale-105"
                 onClick={() => setFilter("all")}
               >
                 All
@@ -199,7 +154,6 @@ export default function TransactionsPage() {
               <Button
                 variant={filter === "expense" ? "default" : "outline"}
                 size="sm"
-                className="transition-all hover:scale-105"
                 onClick={() => setFilter("expense")}
               >
                 Expense
@@ -207,7 +161,6 @@ export default function TransactionsPage() {
               <Button
                 variant={filter === "income" ? "default" : "outline"}
                 size="sm"
-                className="transition-all hover:scale-105"
                 onClick={() => setFilter("income")}
               >
                 Income
@@ -215,13 +168,12 @@ export default function TransactionsPage() {
               <Button
                 variant={filter === "transfer" ? "default" : "outline"}
                 size="sm"
-                className="transition-all hover:scale-105"
                 onClick={() => setFilter("transfer")}
               >
                 Transfer
               </Button>
             </div>
-            <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto transition-all hover:scale-105 hover:shadow-lg">
+            <Button onClick={() => setIsModalOpen(true)} className="w-full sm:w-auto">
               <Plus className="mr-2 h-4 w-4" />
               Add Transaction
             </Button>
@@ -239,11 +191,10 @@ export default function TransactionsPage() {
         <CardContent>
           {!isLoading && filteredTransactions && filteredTransactions.length > 0 ? (
             <div className="space-y-4">
-              {filteredTransactions.map((transaction, index) => (
+              {filteredTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-all duration-200 cursor-pointer hover:shadow-md animate-in slide-in-from-left"
-                  style={{ animationDelay: `${index * 50}ms` }}
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
                 >
                   <div className="flex items-center space-x-4">
                     <div
@@ -317,20 +268,20 @@ export default function TransactionsPage() {
               ))}
             </div>
           ) : !isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12 animate-in fade-in duration-500">
+            <div className="flex flex-col items-center justify-center py-12">
               <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
               <p className="text-lg font-medium">No transactions found</p>
               <p className="text-sm text-muted-foreground mb-4">
                 Try changing the filter or add a transaction
               </p>
-              <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
+              <Button onClick={() => setIsModalOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Add Transaction
               </Button>
             </div>
           ) : (
             <div className="flex items-center justify-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500 motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
             </div>
           )}
         </CardContent>
