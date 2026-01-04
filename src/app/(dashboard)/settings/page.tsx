@@ -294,15 +294,6 @@ export default function SettingsPage() {
     setUploading(true);
 
     try {
-      // Ensure storage bucket exists (fixes "Bucket not found")
-      const ensureRes = await fetch("/api/storage/ensure-profiles-bucket", { method: "POST" });
-      const ensurePayload = await ensureRes.json().catch(() => ({}));
-      if (!ensureRes.ok) {
-        throw new Error(ensurePayload?.error || "Failed to initialize storage bucket");
-      }
-      // If the server can't auto-create buckets (missing service role key), proceed anyway.
-      // Upload will still work if the bucket already exists.
-
       const { data: { session } } = await supabase.auth.getSession();
       if (!session?.user) return;
 
@@ -310,23 +301,25 @@ export default function SettingsPage() {
       const fileName = `${session.user.id}-${Date.now()}.${fileExt}`;
       const filePath = `avatars/${fileName}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from("profiles")
-        .upload(filePath, file, { upsert: true });
+      // Use server-side upload to bypass RLS and ensure bucket existence
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("path", filePath);
 
-      if (uploadError) {
-        const msg = (uploadError as any)?.message || String(uploadError);
-        if (/bucket not found/i.test(msg)) {
-          throw new Error(
-            "Profile picture bucket 'profiles' does not exist. Create it in Supabase Storage, or set SUPABASE_SERVICE_ROLE_KEY on the server to auto-create it."
-          );
-        }
-        throw uploadError;
+      const uploadRes = await fetch("/api/user/upload-avatar", {
+        method: "POST",
+        body: formData,
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if (!uploadRes.ok) {
+        throw new Error(uploadData.error || "Failed to upload image");
       }
 
       const { data: { publicUrl } } = supabase.storage
         .from("profiles")
-        .getPublicUrl(filePath);
+        .getPublicUrl(uploadData.path);
 
       const { error: updateError } = await (supabase as any)
         .from("users")
