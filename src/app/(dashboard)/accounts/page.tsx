@@ -198,26 +198,26 @@ export default function AccountsPage() {
           </Button>
         </div>
 
-        {/* Total Balance Card */}
+        {/* Current Total Balance Card */}
         <Card>
           <CardHeader>
-            <CardTitle>Total Balance</CardTitle>
-            <CardDescription>Across all accounts</CardDescription>
+            <CardTitle>Current Total Balance</CardTitle>
+            <CardDescription>Excluding debt accounts</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
               <p className="text-4xl font-bold text-primary">
-                {formatCurrency(totalBalance, currency)}
+                {formatCurrency(currentMoney, currency)}
               </p>
               <p className="text-sm text-muted-foreground">
-                This includes every account balance (cash, bank, e-wallet, credit cards, etc.)
+                This excludes credit card/debt account balances
               </p>
             </div>
 
             <div className="rounded-lg border p-4 space-y-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Current money (excluding credit cards)</p>
+                  <p className="text-sm text-muted-foreground">Money Preview (after paying selected debt)</p>
                   <p className="text-2xl font-bold">{formatCurrency(currentMoney, currency)}</p>
                 </div>
 
