@@ -187,7 +187,7 @@ export default function TransactionDetailModal({
                 Close
               </Button>
               {/* Styled tooltip wraps the Delete button */}
-              <Tooltip content={transaction?.id ? "Delete transaction and revert account balances" : "Cannot delete this transaction"}>
+              <Tooltip content={transaction?.id ? "Delete transaction\nRevert balances" : "Cannot delete this transaction"}>
                 <button
                   onClick={() => {
                     if (onRequestDelete) onRequestDelete(transaction);

@@ -631,7 +631,7 @@ export default function SettingsPage() {
               <div className="space-y-1">
                 <p className="text-sm font-medium">Change email</p>
                 <p className="text-xs text-muted-foreground">
-                  We will send a verification link to your new email. This page won’t close until you’re verified.
+                  We will send a verification link to your new email.
                 </p>
               </div>
 
