@@ -43,7 +43,7 @@ export default function DashboardPage() {
           .from("accounts")
           .select("*")
           .eq("user_id", session.user.id)
-          .eq("is_active", true);
+          .order("created_at", { ascending: false });
         setAccounts(accountsData ?? []);
 
         // Get recent transactions (newest first)
@@ -69,16 +69,43 @@ export default function DashboardPage() {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
         const { data: monthTransactionsData } = await supabase
           .from("transactions")
-          .select("type, amount")
+          .select("type, amount, account_id, transfer_to_account_id")
           .eq("user_id", session.user.id)
           .gte("date", startOfMonth);
+
         const monthTransactions = (monthTransactionsData ?? []) as any[];
-        setMonthlyIncome(
-          monthTransactions.filter((t) => t.type === "income").reduce((sum, t) => sum + Number(t.amount), 0) || 0
-        );
-        setMonthlyExpenses(
-          monthTransactions.filter((t) => t.type === "expense").reduce((sum, t) => sum + Number(t.amount), 0) || 0
-        );
+        const accountTypeById = new Map<string, string>();
+        (accountsData || []).forEach((a: any) => {
+          if (a?.id) accountTypeById.set(a.id, a.type);
+        });
+        const isCredit = (accountId?: string | null) => {
+          if (!accountId) return false;
+          return accountTypeById.get(accountId) === "credit_card";
+        };
+
+        // Match Reports "cashflow" logic:
+        // - Income counts only when it hits non-credit accounts.
+        // - Expenses are spending from non-credit accounts.
+        // - Debt payments are transfers from non-credit -> credit_card.
+        const income = monthTransactions
+          .filter((t) => t.type === "income" && !isCredit(t.account_id))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const expenses = monthTransactions
+          .filter((t) => t.type === "expense" && !isCredit(t.account_id))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const debtPayments = monthTransactions
+          .filter(
+            (t) =>
+              t.type === "transfer" &&
+              !isCredit(t.account_id) &&
+              isCredit(t.transfer_to_account_id)
+          )
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        setMonthlyIncome(income || 0);
+        setMonthlyExpenses((expenses + debtPayments) || 0);
       }
       setLoading(false);
     };
@@ -86,13 +113,15 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  const currentMoney = accounts
+    .filter((a: any) => a?.type !== "credit_card")
+    .reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   const statCards = [
     {
       title: "Total Balance",
-      value: formatCurrency(totalBalance, currency),
+      value: formatCurrency(currentMoney, currency),
       icon: Wallet,
-      description: `Across ${accounts?.length || 0} accounts`,
+      description: `Across ${(accounts || []).filter((a: any) => a?.type !== "credit_card").length || 0} accounts (excluding debt)`,
       color: "text-primary",
     },
     {

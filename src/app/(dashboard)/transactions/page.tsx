@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Trash2 } from "lucide-react";
+import Tooltip from "@/components/ui/tooltip";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import TransactionDetailModal from "@/components/transactions/TransactionDetailModal";
 import { useToast } from "@/components/ui/use-toast";
@@ -196,7 +197,7 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-      <Card>
+      <Card className="card-nohover">
         <CardHeader>
           <CardTitle>Transactions</CardTitle>
           <CardDescription>Your complete transaction history</CardDescription>
@@ -210,8 +211,7 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction, index) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border gap-3 animate-scaleIn transaction-pop transition-all duration-300"
-                  style={{ animationDelay: `${index * 0.05}s`, opacity: 0, animationFillMode: 'forwards' }}
+                  className="flex items-center justify-between p-4 rounded-lg border gap-3 transition-transform duration-200 hover:scale-[1.02] hover:shadow-md"
                 >
                   <div 
                     onClick={() => setSelectedTransaction(transaction)}
@@ -272,16 +272,18 @@ export default function TransactionsPage() {
                       </p>
                     </div>
                   </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDeleteConfirm(transaction);
-                    }}
-                    className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700 flex-shrink-0"
-                    title="Delete transaction"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
+                  <Tooltip content={transaction?.id ? "Delete transaction\nRevert balances" : "Cannot delete this transaction"}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDeleteConfirm(transaction);
+                      }}
+                      className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700 flex-shrink-0"
+                      title={transaction?.id ? "Delete transaction" : ""}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </Tooltip>
                 </div>
               ))}
             </div>
