@@ -19,6 +19,7 @@ interface TransactionDetailModalProps {
   onClose: () => void;
   transaction: any;
   currency: string;
+  onRequestDelete?: (tx: any) => void;
 }
 
 export default function TransactionDetailModal({
@@ -26,6 +27,7 @@ export default function TransactionDetailModal({
   onClose,
   transaction,
   currency
+  , onRequestDelete
 }: TransactionDetailModalProps) {
   if (!isOpen || !transaction) return null;
 
@@ -175,9 +177,24 @@ export default function TransactionDetailModal({
           </div>
 
           <div className="pt-4">
-            <Button variant="outline" className="w-full" onClick={onClose}>
-              Close
-            </Button>
+            <div className="flex gap-3">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  if (onRequestDelete) onRequestDelete(transaction);
+                  onClose();
+                }}
+                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+                title="Delete transaction"
+              >
+                Delete
+              </button>
+            </div>
           </div>
         </div>
       </div>
