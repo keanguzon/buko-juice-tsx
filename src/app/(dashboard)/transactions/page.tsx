@@ -207,10 +207,11 @@ export default function TransactionsPage() {
         <CardContent>
           {!isLoading && filteredTransactions && filteredTransactions.length > 0 ? (
             <div className="space-y-4">
-              {filteredTransactions.map((transaction) => (
+              {filteredTransactions.map((transaction, index) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border gap-3"
+                  className="flex items-center justify-between p-4 rounded-lg border gap-3 animate-scaleIn transaction-pop transition-all duration-300"
+                  style={{ animationDelay: `${index * 0.05}s`, opacity: 0, animationFillMode: 'forwards' }}
                 >
                   <div 
                     onClick={() => setSelectedTransaction(transaction)}
