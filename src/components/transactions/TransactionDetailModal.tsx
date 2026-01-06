@@ -177,12 +177,16 @@ export default function TransactionDetailModal({
             </div>
           </div>
 
-          <div className="pt-4">
-            <div className="flex gap-3 items-center">
-              <Button variant="outline" onClick={onClose}>
+          <div className="pt-6">
+            <div className="flex justify-center gap-6 items-center">
+              <Button 
+                variant="outline" 
+                onClick={onClose}
+                className="min-w-[100px] h-12 text-base font-semibold"
+              >
                 Close
               </Button>
-              { /* Styled tooltip wraps the Delete button */ }
+              {/* Styled tooltip wraps the Delete button */}
               <Tooltip content={transaction?.id ? "Delete transaction and revert account balances" : "Cannot delete this transaction"}>
                 <button
                   onClick={() => {
@@ -190,7 +194,7 @@ export default function TransactionDetailModal({
                     onClose();
                   }}
                   disabled={!transaction?.id}
-                  className={`flex-1 px-4 py-2 rounded-lg transition-colors ${transaction?.id ? "bg-red-500 text-white hover:bg-red-600" : "bg-red-500/30 text-white/60 cursor-not-allowed"}`}
+                  className={`min-w-[100px] h-12 text-base font-semibold rounded-lg transition-colors ${transaction?.id ? "bg-red-500 text-white hover:bg-red-600" : "bg-red-500/30 text-white/60 cursor-not-allowed"}`}
                   title={transaction?.id ? "Delete transaction" : ""}
                 >
                   Delete
