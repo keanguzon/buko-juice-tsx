@@ -208,11 +208,11 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer"
+                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer gap-3"
                 >
-                  <div className="flex items-center space-x-4">
+                  <div className="flex items-center space-x-4 flex-1 min-w-0">
                     <div
-                      className={`p-3 rounded-full transition-all duration-200 ${
+                      className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 ${
                         transaction.type === "income"
                           ? "bg-green-500/10"
                           : transaction.type === "expense"
@@ -228,11 +228,11 @@ export default function TransactionsPage() {
                         <ArrowLeftRight className="h-5 w-5 text-blue-500" />
                       )}
                     </div>
-                    <div>
-                      <p className="font-medium">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium truncate">
                         {transaction.description || transaction.category?.name || (transaction.type === "transfer" ? "Transfer" : "Transaction")}
                       </p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
                         <span>{transaction.account?.name}</span>
                         {transaction.category?.name && (
                           <>
@@ -249,10 +249,10 @@ export default function TransactionsPage() {
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <p
-                        className={`font-semibold ${
+                        className={`font-semibold text-sm sm:text-base whitespace-nowrap ${
                           transaction.type === "income"
                             ? "text-green-500"
                             : transaction.type === "expense"
@@ -263,7 +263,7 @@ export default function TransactionsPage() {
                         {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
                         {formatCurrency(Number(transaction.amount), currency)}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
                         {formatDate(transaction.date)}
                       </p>
                     </div>

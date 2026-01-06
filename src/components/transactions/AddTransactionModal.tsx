@@ -178,6 +178,11 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else {
         // Single transaction
+        // For PayLater expenses, use startMonth date instead of current date
+        const transactionDate = (type === "expense" && isPayLater) 
+          ? new Date(startMonth + "-01").toISOString().slice(0, 10)
+          : date;
+        
         const { error } = await sb.from("transactions").insert({
           user_id: session.user.id,
           account_id: effectiveAccountId,
@@ -185,7 +190,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
           type,
           amount: amt,
           description,
-          date,
+          date: transactionDate,
           transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
         }).select();
 
@@ -365,7 +370,10 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                   className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
                   required
                 >
-                  {(isPayLater && type === "expense" ? accounts.filter((a: any) => a?.type === "credit_card") : accounts).map((a: any) => (
+                  {(isPayLater && type === "expense" 
+                    ? accounts.filter((a: any) => a?.type === "credit_card") 
+                    : accounts.filter((a: any) => a?.type !== "credit_card")
+                  ).map((a: any) => (
                     <option value={a.id} key={a.id}>{a.name} - {a.currency}</option>
                   ))}
                 </select>
@@ -491,7 +499,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                 id="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all text-base"
+                className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
                 required
               />
             </div>

@@ -117,6 +117,11 @@ export default function AddTransactionForm() {
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else {
         // Single transaction
+        // For PayLater expenses, use startMonth date instead of current date
+        const transactionDate = (type === "expense" && isPayLater) 
+          ? new Date(startMonth + "-01").toISOString().slice(0, 10)
+          : date;
+        
         const { error, data: inserted } = await sb.from("transactions").insert({
           user_id: session.user.id,
           account_id: effectiveAccountId,
@@ -124,7 +129,7 @@ export default function AddTransactionForm() {
           type,
           amount: amt,
           description,
-          date,
+          date: transactionDate,
           transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
         }).select();
 
@@ -255,7 +260,10 @@ export default function AddTransactionForm() {
             else setAccountId(e.target.value);
           }}
         >
-          {(type === "expense" && isPayLater ? accounts.filter((a: any) => a?.type === "credit_card") : accounts).map((a: any) => (
+          {(type === "expense" && isPayLater 
+            ? accounts.filter((a: any) => a?.type === "credit_card") 
+            : accounts.filter((a: any) => a?.type !== "credit_card")
+          ).map((a: any) => (
             <option value={a.id} key={a.id}>{a.name} ({a.currency})</option>
           ))}
         </select>
