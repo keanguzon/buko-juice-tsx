@@ -413,24 +413,27 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                       </select>
                     </div>
 
+                    <div>
+                      <label htmlFor="startMonth" className="block text-sm font-medium mb-2">
+                        Payment Due (Start Month)
+                      </label>
+                      <input
+                        type="month"
+                        id="startMonth"
+                        value={startMonth}
+                        onChange={(e) => setStartMonth(e.target.value)}
+                        className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                      />
+                    </div>
                     {installments > 1 && (
-                      <>
-                        <div>
-                          <label htmlFor="startMonth" className="block text-sm font-medium mb-2">
-                            Start Month
-                          </label>
-                          <input
-                            type="month"
-                            id="startMonth"
-                            value={startMonth}
-                            onChange={(e) => setStartMonth(e.target.value)}
-                            className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
-                          />
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
-                        </p>
-                      </>
+                      <p className="text-xs text-muted-foreground">
+                        ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
+                      </p>
+                    )}
+                    {installments === 1 && (
+                      <p className="text-xs text-muted-foreground">
+                        Full payment due in {startMonth}
+                      </p>
                     )}
                   </div>
                 )}              </div>
