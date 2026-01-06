@@ -24,6 +24,12 @@ export default function SettingsPage() {
   const [username, setUsername] = useState("");
   const [avatarUrl, setAvatarUrl] = useState("");
 
+  const [currentEmail, setCurrentEmail] = useState("");
+  const [newEmail, setNewEmail] = useState("");
+  const [changingEmail, setChangingEmail] = useState(false);
+  const [pendingEmail, setPendingEmail] = useState<string>("");
+  const [checkingEmailVerified, setCheckingEmailVerified] = useState(false);
+
   const [changingPassword, setChangingPassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -249,6 +255,7 @@ export default function SettingsPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
+        setCurrentEmail(session.user.email ?? "");
         // Load user profile
         const { data: userData } = await supabase
           .from("users")
@@ -275,6 +282,131 @@ export default function SettingsPage() {
       console.error("Error loading profile:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSendEmailChange = async () => {
+    const nextEmail = newEmail.trim().toLowerCase();
+
+    if (!nextEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter a new email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const looksLikeEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(nextEmail);
+    if (!looksLikeEmail) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid email address",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (currentEmail && nextEmail === currentEmail.toLowerCase()) {
+      toast({
+        title: "Error",
+        description: "New email must be different from your current email",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setChangingEmail(true);
+    try {
+      const availabilityRes = await fetch("/api/auth/check-availability", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: nextEmail }),
+      });
+
+      const availability = await availabilityRes.json().catch(() => ({}));
+      if (!availabilityRes.ok) {
+        throw new Error(availability?.error || "Failed to validate email");
+      }
+
+      if (availability?.emailExists) {
+        toast({
+          title: "Email already in use",
+          description: "Please choose a different email address",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser(
+        { email: nextEmail },
+        { emailRedirectTo: `${window.location.origin}/auth/callback` }
+      );
+
+      if (error) throw error;
+
+      setPendingEmail(nextEmail);
+      toast({
+        title: "Verification email sent",
+        description: `We sent a verification link to ${nextEmail}. Please verify to complete the change.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to change email",
+        variant: "destructive",
+      });
+    } finally {
+      setChangingEmail(false);
+    }
+  };
+
+  const handleCheckEmailVerified = async () => {
+    if (!pendingEmail) return;
+
+    setCheckingEmailVerified(true);
+    try {
+      const { data, error } = await supabase.auth.getUser();
+      if (error) throw error;
+
+      const authedEmail = (data?.user?.email ?? "").toLowerCase();
+      if (authedEmail !== pendingEmail.toLowerCase()) {
+        toast({
+          title: "Not verified yet",
+          description: `Your email is still ${data?.user?.email || "unchanged"}. Verify the link sent to ${pendingEmail}.`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // Sync public profile record after confirmed
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user?.id) {
+        const { error: updateError } = await (supabase as any)
+          .from("users")
+          .update({ email: authedEmail })
+          .eq("id", session.user.id);
+        if (updateError) throw updateError;
+      }
+
+      setCurrentEmail(authedEmail);
+      setNewEmail("");
+      setPendingEmail("");
+      toast({
+        title: "Email updated",
+        description: "Your email has been changed successfully.",
+      });
+
+      // Reload profile so the disabled field stays in sync
+      loadProfile();
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to verify email change",
+        variant: "destructive",
+      });
+    } finally {
+      setCheckingEmailVerified(false);
     }
   };
 
@@ -489,10 +621,67 @@ export default function SettingsPage() {
                 <Input
                   id="email"
                   type="email"
-                  value={profile?.email || ""}
+                  value={currentEmail || profile?.email || ""}
                   disabled
                 />
               </div>
+            </div>
+
+            <div className="rounded-lg border p-4 space-y-3">
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Change email</p>
+                <p className="text-xs text-muted-foreground">
+                  We will send a verification link to your new email. This page won’t close until you’re verified.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="newEmail">New email</Label>
+                  <Input
+                    id="newEmail"
+                    type="email"
+                    value={newEmail}
+                    onChange={(e) => setNewEmail(e.target.value)}
+                    placeholder="you@domain.com"
+                    disabled={changingEmail}
+                  />
+                </div>
+                <Button onClick={handleSendEmailChange} disabled={changingEmail}>
+                  {changingEmail && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Send verification
+                </Button>
+              </div>
+
+              {pendingEmail && (
+                <div className="rounded-lg bg-muted p-3 space-y-2">
+                  <p className="text-sm">
+                    Verification sent to <span className="font-medium">{pendingEmail}</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    After verifying, click the button below. If you didn’t receive it, check spam.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={handleCheckEmailVerified}
+                      disabled={checkingEmailVerified}
+                    >
+                      {checkingEmailVerified && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      I’ve verified
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      onClick={() => {
+                        setPendingEmail("");
+                      }}
+                      disabled={checkingEmailVerified || changingEmail}
+                    >
+                      Dismiss
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
 
             <Button onClick={handleSaveProfile} disabled={savingProfile}>
