@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import Tooltip from "@/components/ui/tooltip";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { 
   X, 
@@ -184,16 +185,20 @@ export default function TransactionDetailModal({
               >
                 Close
               </button>
-              <button
-                onClick={() => {
-                  if (onRequestDelete) onRequestDelete(transaction);
-                  onClose();
-                }}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
-                title="Delete transaction"
-              >
-                Delete
-              </button>
+              { /* Styled tooltip wraps the Delete button */ }
+              <Tooltip content={transaction?.id ? "Delete transaction and revert account balances" : "Cannot delete this transaction"}>
+                <button
+                  onClick={() => {
+                    if (onRequestDelete) onRequestDelete(transaction);
+                    onClose();
+                  }}
+                  disabled={!transaction?.id}
+                  className={`flex-1 px-4 py-2 rounded-lg transition-colors ${transaction?.id ? "bg-red-500 text-white hover:bg-red-600" : "bg-red-500/30 text-white/60 cursor-not-allowed"}`}
+                  title={transaction?.id ? "Delete transaction" : ""}
+                >
+                  Delete
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>
