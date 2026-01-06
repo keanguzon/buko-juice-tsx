@@ -184,6 +184,25 @@
   }
 }
 
+@keyframes popIn {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.03);
+  }
+  100% {
+    transform: scale(1.02);
+  }
+}
+
+/* Pop animation for transaction items */
+.transaction-pop:hover {
+  animation: popIn 0.3s var(--animation-spring);
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.1), 0 2px 6px -2px rgb(0 0 0 / 0.06);
+}
+
 /* Theme Transition */
 .theme-transition * {
   transition: background-color var(--animation-duration-normal) var(--animation-ease),
