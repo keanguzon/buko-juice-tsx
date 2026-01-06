@@ -217,8 +217,12 @@ export default function AccountsPage() {
             <div className="rounded-lg border p-4 space-y-3">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Money Preview (after paying selected debt)</p>
-                  <p className="text-2xl font-bold">{formatCurrency(currentMoney, currency)}</p>
+                  <p className="text-sm text-muted-foreground">
+                    Debt selected ({monthFilter === "all" ? "All" : monthFilter})
+                  </p>
+                  <p className="font-semibold text-red-500">
+                    {isDebtLoading ? "Loading..." : formatCurrency(selectedDebt, currency)}
+                  </p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
@@ -255,22 +259,14 @@ export default function AccountsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">
-                    Debt selected ({monthFilter === "all" ? "All" : monthFilter})
-                  </p>
-                  <p className="font-semibold text-red-500">
-                    {isDebtLoading ? "Loading..." : formatCurrency(selectedDebt, currency)}
-                  </p>
-                </div>
-                <div className="space-y-1 text-left sm:text-right">
-                  <p className="text-sm text-muted-foreground">Money preview</p>
-                  <p className={`text-3xl font-bold ${previewAfterPay ? "text-foreground" : "text-primary"}`}>
+              {previewAfterPay && (
+                <div className="pt-3 border-t">
+                  <p className="text-sm text-muted-foreground mb-1">Money after paying selected debt</p>
+                  <p className="text-3xl font-bold text-foreground">
                     {formatCurrency(previewMoney, currency)}
                   </p>
                 </div>
-              </div>
+              )}
             </div>
           </CardContent>
         </Card>
