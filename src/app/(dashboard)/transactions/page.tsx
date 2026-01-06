@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Plus, ArrowDownLeft, ArrowUpRight, ArrowLeftRight, Trash2 } from "lucide-react";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
+import TransactionDetailModal from "@/components/transactions/TransactionDetailModal";
 import { useToast } from "@/components/ui/use-toast";
 
 
@@ -20,6 +21,7 @@ export default function TransactionsPage() {
   const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
   const [refreshKey, setRefreshKey] = useState(0);
   const [deleteConfirm, setDeleteConfirm] = useState<any>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [currency, setCurrency] = useState("PHP");
 
@@ -110,7 +112,7 @@ export default function TransactionsPage() {
       const { data, error } = await sb
         .from("transactions")
         .select(
-          "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
+          "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type), transfer_to_account:accounts!transfer_to_account_id(id,name,type)"
         )
         .eq("user_id", session.user.id)
         .order("created_at", { ascending: false })
@@ -208,6 +210,7 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
+                  onClick={() => setSelectedTransaction(transaction)}
                   className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer gap-3"
                 >
                   <div className="flex items-center space-x-4 flex-1 min-w-0">
@@ -348,6 +351,14 @@ export default function TransactionsPage() {
         setIsModalOpen(false);
         setRefreshKey(prev => prev + 1);
       }}
+    />
+
+    {/* Transaction Detail Preview Modal */}
+    <TransactionDetailModal
+      isOpen={!!selectedTransaction}
+      transaction={selectedTransaction}
+      currency={currency}
+      onClose={() => setSelectedTransaction(null)}
     />
   </>
   );
