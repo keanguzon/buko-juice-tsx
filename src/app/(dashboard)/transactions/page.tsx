@@ -210,10 +210,12 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction) => (
                 <div
                   key={transaction.id}
-                  onClick={() => setSelectedTransaction(transaction)}
-                  className="flex items-center justify-between p-4 rounded-lg border hover:bg-accent/50 transition-colors cursor-pointer gap-3"
+                  className="flex items-center justify-between p-4 rounded-lg border gap-3"
                 >
-                  <div className="flex items-center space-x-4 flex-1 min-w-0">
+                  <div 
+                    onClick={() => setSelectedTransaction(transaction)}
+                    className="flex items-center space-x-4 flex-1 min-w-0 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg -m-2 p-2"
+                  >
                     <div
                       className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 ${
                         transaction.type === "income"
@@ -251,8 +253,6 @@ export default function TransactionsPage() {
                         )}
                       </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
                     <div className="text-right">
                       <p
                         className={`font-semibold text-sm sm:text-base whitespace-nowrap ${
@@ -270,17 +270,17 @@ export default function TransactionsPage() {
                         {formatDate(transaction.date)}
                       </p>
                     </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm(transaction);
-                      }}
-                      className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700"
-                      title="Delete transaction"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
                   </div>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDeleteConfirm(transaction);
+                    }}
+                    className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700 flex-shrink-0"
+                    title="Delete transaction"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
                 </div>
               ))}
             </div>
