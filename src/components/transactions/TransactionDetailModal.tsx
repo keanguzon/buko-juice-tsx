@@ -178,13 +178,10 @@ export default function TransactionDetailModal({
           </div>
 
           <div className="pt-4">
-            <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
+            <div className="flex gap-3 items-center">
+              <Button variant="outline" onClick={onClose}>
                 Close
-              </button>
+              </Button>
               { /* Styled tooltip wraps the Delete button */ }
               <Tooltip content={transaction?.id ? "Delete transaction and revert account balances" : "Cannot delete this transaction"}>
                 <button
