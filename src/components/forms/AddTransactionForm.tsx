@@ -25,6 +25,11 @@ export default function AddTransactionForm() {
   const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const getAccount = (id: string) => accounts.find((a: any) => a?.id === id);
+
+  const [isPayLater, setIsPayLater] = useState(false);
+  const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
+
   useEffect(() => {
     const load = async () => {
       const { data: { session } } = await supabase.auth.getSession();
@@ -40,10 +45,17 @@ export default function AddTransactionForm() {
 
       if (accountsList.length > 0) setAccountId(accountsList[0]?.id ?? "");
       if (catsList.length > 0) setCategoryId(catsList[0]?.id ?? "");
+
+      const firstCredit = accountsList.find((a: any) => a?.type === "credit_card");
+      if (firstCredit) setPayLaterAccountId(firstCredit.id);
     };
 
     load();
   }, []);
+
+  useEffect(() => {
+    if (type !== "expense") setIsPayLater(false);
+  }, [type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,7 +69,8 @@ export default function AddTransactionForm() {
       }
 
       const amt = Number(amount);
-      if (!accountId || !amt) {
+      const effectiveAccountId = type === "expense" && isPayLater ? payLaterAccountId : accountId;
+      if (!effectiveAccountId || !amt) {
         toast({ title: "Missing fields", description: "Please select account and amount", variant: "destructive" });
         return;
       }
@@ -65,7 +78,7 @@ export default function AddTransactionForm() {
       // Insert transaction
       const { error, data: inserted } = await sb.from("transactions").insert({
         user_id: session.user.id,
-        account_id: accountId,
+        account_id: effectiveAccountId,
         category_id: categoryId || null,
         type,
         amount: amt,
@@ -81,22 +94,32 @@ export default function AddTransactionForm() {
 
       // Update balances
       if (type === "income") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc?.balance || 0) + amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const meta = getAccount(effectiveAccountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = meta?.type === "credit_card" ? current - amt : current + amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else if (type === "expense") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc?.balance || 0) - amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const meta = getAccount(effectiveAccountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = meta?.type === "credit_card" ? current + amt : current - amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else if (type === "transfer") {
         // subtract from source
         const { data: src } = await sb.from("accounts").select("balance").eq("id", accountId).single();
         const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
+        const srcMeta = getAccount(accountId);
+        const dstMeta = getAccount(transferToAccountId);
         if (!dst) {
           toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
         } else {
-          await sb.from("accounts").update({ balance: Number(src?.balance || 0) - amt }).eq("id", accountId);
-          await sb.from("accounts").update({ balance: Number(dst?.balance || 0) + amt }).eq("id", transferToAccountId);
+          const srcCurrent = Number(src?.balance || 0);
+          const dstCurrent = Number(dst?.balance || 0);
+          const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
+          const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+          await sb.from("accounts").update({ balance: nextSrc }).eq("id", accountId);
+          await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
         }
       }
 
@@ -123,11 +146,27 @@ export default function AddTransactionForm() {
 
       <div>
         <label className="text-sm font-medium">Account</label>
-        <select className="mt-1 w-full rounded-md border px-3 py-2" value={accountId} onChange={(e) => setAccountId(e.target.value)}>
-          {accounts.map((a) => (
+        {type === "expense" && (
+          <label className="mt-2 flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={isPayLater} onChange={(e) => setIsPayLater(e.target.checked)} className="h-4 w-4" />
+            PayLater purchase (adds to debt)
+          </label>
+        )}
+        <select
+          className="mt-1 w-full rounded-md border px-3 py-2"
+          value={type === "expense" && isPayLater ? payLaterAccountId : accountId}
+          onChange={(e) => {
+            if (type === "expense" && isPayLater) setPayLaterAccountId(e.target.value);
+            else setAccountId(e.target.value);
+          }}
+        >
+          {(type === "expense" && isPayLater ? accounts.filter((a: any) => a?.type === "credit_card") : accounts).map((a: any) => (
             <option value={a.id} key={a.id}>{a.name} ({a.currency})</option>
           ))}
         </select>
+        {type === "expense" && isPayLater && accounts.filter((a: any) => a?.type === "credit_card").length === 0 && (
+          <p className="mt-2 text-xs text-muted-foreground">Create a PayLater/Debt account first (type: Credit Card) in Accounts.</p>
+        )}
       </div>
 
       {type === "transfer" && (
