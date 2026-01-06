@@ -16,13 +16,7 @@ export function ModeToggle() {
   const { setTheme } = useTheme()
 
   const applyTheme = (t: string) => {
-    try {
-      document.documentElement.classList.add("theme-transition");
-      setTheme(t);
-      setTimeout(() => document.documentElement.classList.remove("theme-transition"), 350);
-    } catch (e) {
-      setTheme(t);
-    }
+    setTheme(t)
   };
 
   return (

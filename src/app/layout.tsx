@@ -4,6 +4,7 @@ import "./globals.css";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { LoadingBar } from "@/components/ui/loading-bar";
+import ThemeTransitionOverlay from "@/components/theme/ThemeTransitionOverlay";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -31,6 +32,7 @@ export default function RootLayout({
           disableTransitionOnChange={false}
         >
           <LoadingBar />
+          <ThemeTransitionOverlay />
           <div className="min-h-screen animate-fade-in">{children}</div>
           <Toaster />
         </ThemeProvider>

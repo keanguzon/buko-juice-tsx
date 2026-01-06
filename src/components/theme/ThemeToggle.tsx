@@ -6,15 +6,9 @@ import { useTheme } from "next-themes";
 
 export function ThemeToggle() {
   const { theme, setTheme } = useTheme();
-  const [isRotating, setIsRotating] = React.useState(false);
 
   const toggleTheme = () => {
-    setIsRotating(true);
     setTheme(theme === "dark" ? "light" : "dark");
-    
-    setTimeout(() => {
-      setIsRotating(false);
-    }, 500);
   };
 
   return (
@@ -28,14 +22,14 @@ export function ThemeToggle() {
           theme === "dark" 
             ? "rotate-90 scale-0 opacity-0" 
             : "rotate-0 scale-100 opacity-100"
-        } ${isRotating ? "animate-rotate" : ""}`}
+        }`}
       />
       <Moon 
         className={`h-5 w-5 transition-all duration-300 absolute ${
           theme === "dark" 
             ? "rotate-0 scale-100 opacity-100" 
             : "rotate-90 scale-0 opacity-0"
-        } ${isRotating ? "animate-rotate" : ""}`}
+        }`}
       />
     </button>
   );

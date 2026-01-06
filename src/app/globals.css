@@ -62,8 +62,52 @@
   * {
     @apply border-border;
   }
+
+  /* Theme switch timing: keep background + text in sync */
+  html {
+    @apply bg-background;
+  }
+
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Smooth color transitions for ALL elements - like X/Twitter */
+  *,
+  *::before,
+  *::after {
+    transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                color 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                fill 300ms cubic-bezier(0.4, 0, 0.2, 1),
+                stroke 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+  }
+
+  /* Ensure text-heavy elements (incl. bold headings) transition together */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  p,
+  span,
+  a,
+  strong,
+  b,
+  label,
+  button,
+  input,
+  textarea,
+  select {
+    transition: color var(--animation-duration-normal) var(--animation-ease),
+      background-color var(--animation-duration-normal) var(--animation-ease),
+      border-color var(--animation-duration-normal) var(--animation-ease);
+  }
+
+  svg {
+    transition: fill var(--animation-duration-normal) var(--animation-ease),
+      stroke var(--animation-duration-normal) var(--animation-ease);
   }
 }
 
@@ -84,11 +128,7 @@
     box-shadow: 0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   }
 
-  /* Disable Card hover animation when needed */
-  .card-nohover {
-    transition: none;
-  }
-
+  /* Disable Card hover animation when needed - only disable transform, keep color transition */
   .card-nohover:hover {
     transform: none;
     box-shadow: none;
@@ -134,9 +174,26 @@
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
+
+  /* Theme transition cross-fade animation */
+  .animate-theme-fade {
+    animation: themeFade 400ms ease-in-out;
+  }
 }
 
 /* Keyframe Animations */
+@keyframes themeFade {
+  0% {
+    opacity: 0;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -194,12 +251,8 @@
   }
 }
 
-/* Theme Transition */
-.theme-transition * {
-  transition: background-color var(--animation-duration-normal) var(--animation-ease),
-              border-color var(--animation-duration-normal) var(--animation-ease),
-              color var(--animation-duration-normal) var(--animation-ease) !important;
-}
+/* Theme Transition (legacy - now handled via requestAnimationFrame in ThemeToggle) */
+/* Keeping for backward compatibility but transitions are now globally unified above */
 
 /* Loading Spinner */
 .loading-spinner {

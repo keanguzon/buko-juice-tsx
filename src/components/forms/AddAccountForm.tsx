@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
 
 const EWalletIcons = ["gcash.png", "maya.png", "gotyme.png", "seabank.png"];
-const DebtIcons = ["Spaylater.avif", "Metrobank.webp", "tiktok.png"];
+const DebtIcons = ["Spaylater.png", "Metrobank.webp", "tiktok.png"];
 
 export default function AddAccountForm() {
   const supabase = createClient();

@@ -5,13 +5,15 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { X, ArrowUpRight, ArrowDownLeft, ArrowLeftRight } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
 
 interface AddTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultAccountId?: string;
 }
 
-export default function AddTransactionModal({ isOpen, onClose }: AddTransactionModalProps) {
+export default function AddTransactionModal({ isOpen, onClose, defaultAccountId }: AddTransactionModalProps) {
   const supabase = createClient();
   const sb = supabase as any;
   const router = useRouter();
@@ -28,6 +30,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
   const [description, setDescription] = useState("");
   const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [currency, setCurrency] = useState("PHP");
 
   const [isPayLater, setIsPayLater] = useState(false);
   const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
@@ -38,9 +41,9 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
 
   useEffect(() => {
     if (isOpen) {
-      loadData();
+      loadData(defaultAccountId);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultAccountId]);
 
   useEffect(() => {
     // Auto-select first matching category when type changes
@@ -62,9 +65,16 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
     }
   }, [type]);
 
-  const loadData = async () => {
+  const loadData = async (preferredAccountId?: string) => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) return;
+
+    const { data: pref } = await supabase
+      .from("user_preferences")
+      .select("currency")
+      .eq("user_id", session.user.id)
+      .single();
+    if (pref && (pref as any).currency) setCurrency((pref as any).currency);
 
     const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
     const accountsList = (accountsData ?? []) as any[];
@@ -74,7 +84,27 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
     const catsList = (catsData ?? []) as any[];
     setCategories(catsList);
 
-    if (accountsList.length > 0) setAccountId(accountsList[0]?.id ?? "");
+    if (accountsList.length > 0) {
+      const preferred = preferredAccountId
+        ? accountsList.find((a: any) => a?.id === preferredAccountId)
+        : null;
+
+      if (preferred) {
+        if (preferred?.type === "credit_card") {
+          setType("expense");
+          setIsPayLater(true);
+          setPayLaterAccountId(preferred.id);
+          // Fallback from-account for transfers if user switches type
+          const firstNonCredit = accountsList.find((a: any) => a?.type !== "credit_card");
+          setAccountId(firstNonCredit?.id ?? preferred.id);
+        } else {
+          setAccountId(preferred.id);
+        }
+      } else {
+        const firstNonCredit = accountsList.find((a: any) => a?.type !== "credit_card");
+        setAccountId(firstNonCredit?.id ?? accountsList[0]?.id ?? "");
+      }
+    }
     if (catsList.length > 0) setCategoryId(catsList[0]?.id ?? "");
 
     const firstCredit = accountsList.find((a: any) => a?.type === "credit_card");
@@ -82,6 +112,15 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
   };
 
   const getAccount = (id: string) => accounts.find((a: any) => a?.id === id);
+
+  const effectiveAccountId = type === "expense" && isPayLater ? payLaterAccountId : accountId;
+  const selectedAccount = effectiveAccountId ? getAccount(effectiveAccountId) : null;
+  const selectedAccountBalance = Number(selectedAccount?.balance ?? 0);
+  const selectedAccountCurrency = selectedAccount?.currency || currency;
+
+  const transferToAccount = transferToAccountId ? getAccount(transferToAccountId) : null;
+  const transferToBalance = Number(transferToAccount?.balance ?? 0);
+  const transferToCurrency = transferToAccount?.currency || currency;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -378,6 +417,11 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                   ))}
                 </select>
               )}
+              {selectedAccount ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Balance: <span className="font-medium text-foreground">{formatCurrency(selectedAccountBalance, selectedAccountCurrency)}</span>
+                </p>
+              ) : null}
               {isPayLater && type === "expense" && accounts.filter((a: any) => a?.type === "credit_card").length === 0 && (
                 <p className="mt-2 text-xs text-muted-foreground">
                   No PayLater/Debt accounts yet. Create one in Accounts (type: Credit Card) and name it “SpayLater”.
@@ -463,6 +507,11 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                     <option value={a.id} key={a.id}>{a.name}</option>
                   ))}
                 </select>
+                {transferToAccount ? (
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Balance: <span className="font-medium text-foreground">{formatCurrency(transferToBalance, transferToCurrency)}</span>
+                  </p>
+                ) : null}
               </div>
             )}
 

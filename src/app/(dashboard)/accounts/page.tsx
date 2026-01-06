@@ -14,8 +14,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp } from "lucide-react";
+import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, GripVertical, Edit2 } from "lucide-react";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
+import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 
 const accountTypeIcons = {
   cash: Wallet,
@@ -38,6 +39,8 @@ export default function AccountsPage() {
   const sb = supabase as any;
   const [accounts, setAccounts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddTransactionOpen, setIsAddTransactionOpen] = useState(false);
+  const [defaultTransactionAccountId, setDefaultTransactionAccountId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [currency, setCurrency] = useState("PHP");
 
@@ -46,6 +49,13 @@ export default function AccountsPage() {
   const [expenseItemsByMonth, setExpenseItemsByMonth] = useState<Record<string, any[]>>({});
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [previewAfterPay, setPreviewAfterPay] = useState(false);
+  const [isEditingOrder, setIsEditingOrder] = useState(false);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  const normalizeLogoFilename = (filename: string) => {
+    const cleaned = filename.replace(/^\/?logos\//i, "").replace(/^\//, "");
+    return cleaned.replace(/\.avif$/i, ".png");
+  };
 
   useEffect(() => {
     loadAccounts();
@@ -65,13 +75,32 @@ export default function AccountsPage() {
         .single();
       if (pref && (pref as any).currency) setCurrency((pref as any).currency);
 
-      const { data } = await supabase
+      let accountsList: any[] = [];
+
+      const { data, error } = await supabase
         .from("accounts")
         .select("*")
         .eq("user_id", session.user.id)
+        .order("display_order", { ascending: true })
         .order("created_at", { ascending: false });
 
-      const accountsList = data || [];
+      if (error) {
+        const { data: fallbackData, error: fallbackErr } = await supabase
+          .from("accounts")
+          .select("*")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false });
+
+        if (fallbackErr) {
+          console.error("Failed to load accounts", fallbackErr);
+          accountsList = [];
+        } else {
+          accountsList = fallbackData || [];
+        }
+      } else {
+        accountsList = data || [];
+      }
+
       setAccounts(accountsList);
 
       // Load credit-card (SpayLater) debt from transactions
@@ -145,6 +174,42 @@ export default function AccountsPage() {
       }
     }
     setIsLoading(false);
+  };
+
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    if (draggedIndex === null || draggedIndex === index) return;
+
+    const newAccounts = [...accounts];
+    const draggedItem = newAccounts[draggedIndex];
+    newAccounts.splice(draggedIndex, 1);
+    newAccounts.splice(index, 0, draggedItem);
+
+    setAccounts(newAccounts);
+    setDraggedIndex(index);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedIndex(null);
+  };
+
+  const saveAccountOrder = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const updates = accounts.map((acc, idx) => 
+      sb.from("accounts")
+        .update({ display_order: idx })
+        .eq("id", acc.id)
+        .eq("user_id", session.user.id)
+    );
+
+    await Promise.all(updates);
+    setIsEditingOrder(false);
   };
 
   const totalBalance = accounts.reduce((sum, acc) => sum + Number(acc.balance), 0);
@@ -271,6 +336,125 @@ export default function AccountsPage() {
           </CardContent>
         </Card>
 
+        {/* Accounts Card with Reordering */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Accounts</CardTitle>
+                <CardDescription>Your financial accounts</CardDescription>
+              </div>
+              {!isEditingOrder ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsEditingOrder(true)}
+                  disabled={!(accounts && accounts.length > 1)}
+                  title={accounts && accounts.length > 1 ? "Reorder your accounts" : "Add at least two accounts to reorder"}
+                >
+                  <Edit2 className="h-4 w-4 mr-2" />
+                  Edit Order
+                </Button>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setIsEditingOrder(false);
+                      loadAccounts();
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={saveAccountOrder}
+                  >
+                    Save Order
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!isLoading && accounts && accounts.length > 0 ? (
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {accounts.map((account, index) => {
+                  const Icon = accountTypeIcons[account.type as keyof typeof accountTypeIcons] || Wallet;
+                  return (
+                    <Card
+                      key={account.id}
+                      draggable={isEditingOrder}
+                      onDragStart={() => handleDragStart(index)}
+                      onDragOver={(e) => handleDragOver(e, index)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => {
+                        if (!isEditingOrder) {
+                          setDefaultTransactionAccountId(account.id);
+                          setIsAddTransactionOpen(true);
+                        }
+                      }}
+                      className={
+                        isEditingOrder
+                          ? "cursor-move transition-all duration-200"
+                          : "cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                      }
+                    >
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium truncate pr-2">
+                          {account.name}
+                        </CardTitle>
+                        <div className="flex items-center gap-2">
+                          {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : null}
+                          <div
+                            className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+                            style={{ backgroundColor: `${account.color}20` }}
+                          >
+                            {account.icon ? (
+                              <img
+                                src={`/logos/${normalizeLogoFilename(account.icon)}`}
+                                alt={account.name}
+                                className="h-5 w-5"
+                              />
+                            ) : (
+                              <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
+                            )}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {formatCurrency(Number(account.balance), currency)}
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
+                        </p>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            ) : !isLoading ? (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
+                <p className="text-lg font-medium">No accounts yet</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add your first account to start tracking
+                </p>
+                <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Account
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center py-4">
+                <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500"></div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* PayLater / Debt Monthly Breakdown */}
         <Card>
           <CardHeader>
@@ -321,61 +505,6 @@ export default function AccountsPage() {
             )}
           </CardContent>
         </Card>
-
-        {/* Accounts Grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {!isLoading && accounts && accounts.length > 0 ? (
-            accounts.map((account, index) => {
-              const Icon = accountTypeIcons[account.type as keyof typeof accountTypeIcons] || Wallet;
-              return (
-                <Card 
-                  key={account.id} 
-                  className="cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1 animate-in slide-in-from-bottom"
-                  style={{ animationDelay: `${index * 100}ms` }}
-                >
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      {account.name}
-                    </CardTitle>
-                    <div className="p-2 rounded-full transition-all duration-200 hover:scale-110" style={{ backgroundColor: `${account.color}20` }}>
-                      {account.icon ? (
-                        <img src={`/logos/${account.icon}`} alt={account.name} className="h-5 w-5" />
-                      ) : (
-                        <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
-                      )}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {formatCurrency(Number(account.balance), currency)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })
-          ) : !isLoading ? (
-            <Card className="col-span-full animate-in fade-in duration-500">
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
-                <p className="text-lg font-medium">No accounts yet</p>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Add your first account to start tracking
-                </p>
-                <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Add Account
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="col-span-full flex items-center justify-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500 motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Add Account Modal */}
@@ -386,6 +515,16 @@ export default function AccountsPage() {
           loadAccounts();
         }}
         existingAccounts={accounts.map((acc) => ({ icon: acc.icon, is_savings: acc.is_savings }))}
+      />
+
+      <AddTransactionModal
+        isOpen={isAddTransactionOpen}
+        defaultAccountId={defaultTransactionAccountId}
+        onClose={() => {
+          setIsAddTransactionOpen(false);
+          setDefaultTransactionAccountId(undefined);
+          loadAccounts();
+        }}
       />
     </>
   );
