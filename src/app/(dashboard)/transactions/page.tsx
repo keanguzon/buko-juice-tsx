@@ -359,6 +359,7 @@ export default function TransactionsPage() {
       transaction={selectedTransaction}
       currency={currency}
       onClose={() => setSelectedTransaction(null)}
+      onRequestDelete={(tx) => setDeleteConfirm(tx)}
     />
   </>
   );
