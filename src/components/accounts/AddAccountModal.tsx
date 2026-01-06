@@ -26,7 +26,7 @@ const accountOptions: AccountOption[] = [
   { type: "bank", icon: "gotyme.png", name: "GoTyme Savings", color: "#06b6d4", isSavings: true },
   { type: "bank", icon: "seabank.png", name: "SeaBank Savings", color: "#FF6B00", isSavings: true },
   // PayLater / Debt (tracked as credit_card)
-  { type: "credit_card", icon: "Spaylater.avif", name: "SPayLater", color: "#10b981", isSavings: false },
+  { type: "credit_card", icon: "Spaylater.png", name: "SPayLater", color: "#10b981", isSavings: false },
   { type: "credit_card", icon: "Metrobank.webp", name: "Metrobank", color: "#007DFE", isSavings: false },
   { type: "credit_card", icon: "tiktok.png", name: "TikTok PayLater", color: "#000000", isSavings: false },
 ];
