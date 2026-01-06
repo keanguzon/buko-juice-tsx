@@ -25,6 +25,10 @@ const accountOptions: AccountOption[] = [
   { type: "e_wallet", icon: "maya.png", name: "Maya Savings", color: "#10b981", isSavings: true },
   { type: "bank", icon: "gotyme.png", name: "GoTyme Savings", color: "#06b6d4", isSavings: true },
   { type: "bank", icon: "seabank.png", name: "SeaBank Savings", color: "#FF6B00", isSavings: true },
+  // PayLater / Debt (tracked as credit_card)
+  { type: "credit_card", icon: "Spaylater.avif", name: "SPayLater", color: "#10b981", isSavings: false },
+  { type: "credit_card", icon: "Metrobank.webp", name: "Metrobank", color: "#007DFE", isSavings: false },
+  { type: "credit_card", icon: "tiktok.png", name: "TikTok PayLater", color: "#000000", isSavings: false },
 ];
 
 interface AddAccountModalProps {
@@ -43,6 +47,14 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
   const [interestRate, setInterestRate] = useState("");
   const [includeNetworth, setIncludeNetworth] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+
+  // When account type changes, reset balance and adjust includeNetworth
+  React.useEffect(() => {
+    if (selectedAccount?.type === "credit_card") {
+      setBalance("0");
+      setIncludeNetworth(false); // Debt accounts shouldn't increase net worth
+    }
+  }, [selectedAccount]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -121,7 +133,7 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
               <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">Wallet</h4>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {accountOptions
-                  .filter((opt) => !opt.isSavings)
+                  .filter((opt) => !opt.isSavings && opt.type !== "credit_card")
                   .map((option, idx) => {
                     const isDisabled = isAccountDisabled(option);
                     return (
@@ -210,33 +222,89 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
               </div>
             </div>
 
+            {/* PayLater / Debt Category */}
+            <div>
+              <h4 className="text-sm font-semibold text-muted-foreground uppercase mb-3">PayLater / Debt</h4>
+              <p className="text-xs text-muted-foreground mb-3">
+                Track your buy-now-pay-later purchases. Your cash won't decrease until you record a payment.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {accountOptions
+                  .filter((opt) => !opt.isSavings && opt.type === "credit_card")
+                  .map((option, idx) => {
+                    const isDisabled = isAccountDisabled(option);
+                    return (
+                      <button
+                        key={idx}
+                        type="button"
+                        disabled={isDisabled}
+                        onClick={() => !isDisabled && setSelectedAccount(option)}
+                        className={`
+                          flex flex-col items-center p-4 border-2 rounded-xl transition-all
+                          ${isDisabled 
+                            ? "opacity-40 cursor-not-allowed border-gray-200 dark:border-slate-700" 
+                            : selectedAccount === option
+                            ? "border-primary shadow-lg"
+                            : "border-gray-200 dark:border-slate-700 hover:border-primary/50"
+                          }
+                        `}
+                        style={
+                          !isDisabled && selectedAccount === option
+                            ? { borderColor: option.color, boxShadow: `0 4px 12px ${option.color}40` }
+                            : {}
+                        }
+                      >
+                        <div className="w-12 h-12 mb-2 flex items-center justify-center bg-white dark:bg-slate-900 rounded-lg border dark:border-slate-700">
+                          {option.icon ? (
+                            <img src={`/logos/${option.icon}`} alt={option.name} className="w-10 h-10 object-contain" />
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke={option.color} strokeWidth="2">
+                              <rect x="2" y="6" width="20" height="12" rx="2"></rect>
+                              <path d="M2 10h20"></path>
+                            </svg>
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-center leading-tight">{option.name}</span>
+                      </button>
+                    );
+                  })}
+              </div>
+            </div>
+
             {/* Show form fields only if an account is selected */}
             {selectedAccount && (
               <>
-                {/* Include in Net Worth */}
-                <div className="flex items-start space-x-2">
-                  <input
-                    type="checkbox"
-                    id="includeNetworth"
-                    checked={includeNetworth}
-                    onChange={(e) => setIncludeNetworth(e.target.checked)}
-                    className="mt-1"
-                  />
-                  <div>
-                    <label htmlFor="includeNetworth" className="text-sm font-medium cursor-pointer">
-                      Include in Total Net Worth
-                    </label>
-                    <p className="text-xs text-muted-foreground">
-                      Uncheck if you don't want this account counted in your total net worth
-                    </p>
+                {/* Include in Net Worth - hide for debt accounts */}
+                {selectedAccount.type !== "credit_card" && (
+                  <div className="flex items-start space-x-2">
+                    <input
+                      type="checkbox"
+                      id="includeNetworth"
+                      checked={includeNetworth}
+                      onChange={(e) => setIncludeNetworth(e.target.checked)}
+                      className="mt-1"
+                    />
+                    <div>
+                      <label htmlFor="includeNetworth" className="text-sm font-medium cursor-pointer">
+                        Include in Total Net Worth
+                      </label>
+                      <p className="text-xs text-muted-foreground">
+                        Uncheck if you don't want this account counted in your total net worth
+                      </p>
+                    </div>
                   </div>
-                </div>
+                )}
 
-                {/* Initial Balance */}
+                {/* Initial Balance / Debt */}
                 <div>
                   <label htmlFor="balance" className="block text-sm font-medium mb-2">
-                    Initial Balance
+                    {selectedAccount.type === "credit_card" ? "Initial Debt (if any)" : "Initial Balance"}
                   </label>
+                  {selectedAccount.type === "credit_card" && (
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Usually leave this at 0. Only enter an amount if you already have existing debt to track.
+                    </p>
+                  )}
                   <div className="relative">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-semibold">₱</span>
                     <input

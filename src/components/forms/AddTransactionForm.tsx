@@ -29,6 +29,10 @@ export default function AddTransactionForm() {
 
   const [isPayLater, setIsPayLater] = useState(false);
   const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
+  const [installments, setInstallments] = useState<number>(1);
+  const [startMonth, setStartMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+
+  const debtAccounts = accounts.filter((a: any) => a?.type === "credit_card");
 
   useEffect(() => {
     const load = async () => {
@@ -54,7 +58,10 @@ export default function AddTransactionForm() {
   }, []);
 
   useEffect(() => {
-    if (type !== "expense") setIsPayLater(false);
+    if (type !== "expense") {
+      setIsPayLater(false);
+      setInstallments(1);
+    }
   }, [type]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -75,55 +82,95 @@ export default function AddTransactionForm() {
         return;
       }
 
-      // Insert transaction
-      const { error, data: inserted } = await sb.from("transactions").insert({
-        user_id: session.user.id,
-        account_id: effectiveAccountId,
-        category_id: categoryId || null,
-        type,
-        amount: amt,
-        description,
-        date,
-        transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
-      }).select();
-
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      // Update balances
-      if (type === "income") {
-        const meta = getAccount(effectiveAccountId);
+      // Insert transaction(s) - for PayLater with installments, create multiple transactions
+      if (type === "expense" && isPayLater && installments > 1) {
+        const installmentAmount = amt / installments;
+        const transactions = [];
+        
+        for (let i = 0; i < installments; i++) {
+          const installmentDate = new Date(startMonth + "-01");
+          installmentDate.setMonth(installmentDate.getMonth() + i);
+          const dateStr = installmentDate.toISOString().slice(0, 10);
+          
+          transactions.push({
+            user_id: session.user.id,
+            account_id: effectiveAccountId,
+            category_id: categoryId || null,
+            type,
+            amount: installmentAmount,
+            description: `${description} (Installment ${i + 1}/${installments})`,
+            date: dateStr,
+            transfer_to_account_id: null,
+          });
+        }
+        
+        const { error } = await sb.from("transactions").insert(transactions);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+        
+        // Update debt account balance (sum of all installments)
         const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
         const current = Number(acc?.balance || 0);
-        const newBal = meta?.type === "credit_card" ? current - amt : current + amt;
+        const newBal = current + amt; // Debt increases by total amount
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
-      } else if (type === "expense") {
-        const meta = getAccount(effectiveAccountId);
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
-        const current = Number(acc?.balance || 0);
-        const newBal = meta?.type === "credit_card" ? current + amt : current - amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
-      } else if (type === "transfer") {
-        // subtract from source
-        const { data: src } = await sb.from("accounts").select("balance").eq("id", accountId).single();
-        const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
-        const srcMeta = getAccount(accountId);
-        const dstMeta = getAccount(transferToAccountId);
-        if (!dst) {
-          toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
-        } else {
-          const srcCurrent = Number(src?.balance || 0);
-          const dstCurrent = Number(dst?.balance || 0);
-          const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
-          const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
-          await sb.from("accounts").update({ balance: nextSrc }).eq("id", accountId);
-          await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
+      } else {
+        // Single transaction
+        const { error, data: inserted } = await sb.from("transactions").insert({
+          user_id: session.user.id,
+          account_id: effectiveAccountId,
+          category_id: categoryId || null,
+          type,
+          amount: amt,
+          description,
+          date,
+          transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
+        }).select();
+
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+
+        // Update balances for single transaction
+        if (type === "income") {
+          const meta = getAccount(effectiveAccountId);
+          const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+          const current = Number(acc?.balance || 0);
+          const newBal = meta?.type === "credit_card" ? current - amt : current + amt;
+          await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
+        } else if (type === "expense") {
+          const meta = getAccount(effectiveAccountId);
+          const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+          const current = Number(acc?.balance || 0);
+          const newBal = meta?.type === "credit_card" ? current + amt : current - amt;
+          await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
+        } else if (type === "transfer") {
+          // subtract from source
+          const { data: src } = await sb.from("accounts").select("balance").eq("id", accountId).single();
+          const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
+          const srcMeta = getAccount(accountId);
+          const dstMeta = getAccount(transferToAccountId);
+          if (!dst) {
+            toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
+          } else {
+            const srcCurrent = Number(src?.balance || 0);
+            const dstCurrent = Number(dst?.balance || 0);
+            const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
+            const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+            await sb.from("accounts").update({ balance: nextSrc }).eq("id", accountId);
+            await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
+          }
         }
       }
 
-      toast({ title: "Transaction added", description: "Your transaction was saved." });
+      toast({ 
+        title: "Transaction added", 
+        description: isPayLater && installments > 1 
+          ? `Created ${installments} installments successfully.` 
+          : "Your transaction was saved." 
+      });
       router.push("/transactions");
       router.refresh();
     } catch (err) {
@@ -147,10 +194,55 @@ export default function AddTransactionForm() {
       <div>
         <label className="text-sm font-medium">Account</label>
         {type === "expense" && (
-          <label className="mt-2 flex items-center gap-2 text-sm">
-            <input type="checkbox" checked={isPayLater} onChange={(e) => setIsPayLater(e.target.checked)} className="h-4 w-4" />
-            PayLater purchase (adds to debt)
-          </label>
+          <div className="mt-2 space-y-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={isPayLater} onChange={(e) => setIsPayLater(e.target.checked)} className="h-4 w-4" />
+              PayLater purchase (adds to debt)
+            </label>
+
+            {/* Installment options */}
+            {isPayLater && (
+              <div className="space-y-3 pl-6 border-l-2">
+                <div>
+                  <label htmlFor="installments" className="block text-sm font-medium mb-1">
+                    Installments
+                  </label>
+                  <select
+                    id="installments"
+                    value={installments}
+                    onChange={(e) => setInstallments(Number(e.target.value))}
+                    className="w-full rounded-md border px-3 py-2"
+                  >
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                      <option key={n} value={n}>
+                        {n === 1 ? "Pay in full (1 month)" : `${n} months`}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {installments > 1 && (
+                  <>
+                    <div>
+                      <label htmlFor="startMonth" className="block text-sm font-medium mb-1">
+                        Start Month
+                      </label>
+                      <input
+                        type="month"
+                        id="startMonth"
+                        value={startMonth}
+                        onChange={(e) => setStartMonth(e.target.value)}
+                        className="w-full rounded-md border px-3 py-2"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
         )}
         <select
           className="mt-1 w-full rounded-md border px-3 py-2"

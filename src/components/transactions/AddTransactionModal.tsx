@@ -31,6 +31,10 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
 
   const [isPayLater, setIsPayLater] = useState(false);
   const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
+  const [installments, setInstallments] = useState<number>(1);
+  const [startMonth, setStartMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+
+  const debtAccounts = accounts.filter((a: any) => a?.type === "credit_card");
 
   useEffect(() => {
     if (isOpen) {
@@ -54,6 +58,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
     // PayLater mode only makes sense for expenses
     if (type !== "expense") {
       setIsPayLater(false);
+      setInstallments(1);
     }
   }, [type]);
 
@@ -138,68 +143,110 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
         }
       }
 
-      // Insert transaction
-      const { error } = await sb.from("transactions").insert({
-        user_id: session.user.id,
-        account_id: effectiveAccountId,
-        category_id: type === "transfer" ? null : (categoryId || null),
-        type,
-        amount: amt,
-        description,
-        date,
-        transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
-      }).select();
-
-      if (error) {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
-        return;
-      }
-
-      // Update balances
-      const effAcc = getAccount(effectiveAccountId);
-      const effType = effAcc?.type;
-
-      if (type === "income") {
+      // Insert transaction(s) - for PayLater with installments, create multiple transactions
+      if (type === "expense" && isPayLater && installments > 1) {
+        const installmentAmount = amt / installments;
+        const transactions = [];
+        
+        for (let i = 0; i < installments; i++) {
+          const installmentDate = new Date(startMonth + "-01");
+          installmentDate.setMonth(installmentDate.getMonth() + i);
+          const dateStr = installmentDate.toISOString().slice(0, 10);
+          
+          transactions.push({
+            user_id: session.user.id,
+            account_id: effectiveAccountId,
+            category_id: categoryId || null,
+            type,
+            amount: installmentAmount,
+            description: `${description} (Installment ${i + 1}/${installments})`,
+            date: dateStr,
+            transfer_to_account_id: null,
+          });
+        }
+        
+        const { error } = await sb.from("transactions").insert(transactions);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
+        
+        // Update debt account balance (sum of all installments)
         const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
         const current = Number(acc?.balance || 0);
-        const newBal = effType === "credit_card" ? current - amt : current + amt;
+        const newBal = current + amt; // Debt increases by total amount
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
-      } else if (type === "expense") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
-        const current = Number(acc?.balance || 0);
-        const newBal = effType === "credit_card" ? current + amt : current - amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
-      } else if (type === "transfer") {
-        const { data: src } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
-        const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
+      } else {
+        // Single transaction
+        const { error } = await sb.from("transactions").insert({
+          user_id: session.user.id,
+          account_id: effectiveAccountId,
+          category_id: type === "transfer" ? null : (categoryId || null),
+          type,
+          amount: amt,
+          description,
+          date,
+          transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
+        }).select();
 
-        const srcMeta = getAccount(effectiveAccountId);
-        const dstMeta = getAccount(transferToAccountId);
+        if (error) {
+          toast({ title: "Error", description: error.message, variant: "destructive" });
+          return;
+        }
 
-        if (!dst) {
-          toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
-        } else {
-          const srcCurrent = Number(src?.balance || 0);
-          const dstCurrent = Number(dst?.balance || 0);
+        // Update balances for single transaction
+        const effAcc = getAccount(effectiveAccountId);
+        const effType = effAcc?.type;
 
-          // For credit cards, balance is "debt":
-          // - Paying a credit card (transfer to credit_card) reduces debt (dst - amt)
-          // - Sending from credit card increases debt (src + amt)
-          const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
-          const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+        if (type === "income") {
+          const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+          const current = Number(acc?.balance || 0);
+          const newBal = effType === "credit_card" ? current - amt : current + amt;
+          await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
+        } else if (type === "expense") {
+          const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+          const current = Number(acc?.balance || 0);
+          const newBal = effType === "credit_card" ? current + amt : current - amt;
+          await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
+        } else if (type === "transfer") {
+          const { data: src } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+          const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
 
-          await sb.from("accounts").update({ balance: nextSrc }).eq("id", effectiveAccountId);
-          await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
+          const srcMeta = getAccount(effectiveAccountId);
+          const dstMeta = getAccount(transferToAccountId);
+
+          if (!dst) {
+            toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
+          } else {
+            const srcCurrent = Number(src?.balance || 0);
+            const dstCurrent = Number(dst?.balance || 0);
+
+            // For credit cards, balance is "debt":
+            // - Paying a credit card (transfer to credit_card) reduces debt (dst - amt)
+            // - Sending from credit card increases debt (src + amt)
+            const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
+            const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+
+            await sb.from("accounts").update({ balance: nextSrc }).eq("id", effectiveAccountId);
+            await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
+          }
         }
       }
 
-      toast({ title: "Transaction added", description: "Your transaction was saved." });
+      toast({ 
+        title: "Transaction added", 
+        description: isPayLater && installments > 1 
+          ? `Created ${installments} installments successfully.` 
+          : "Your transaction was saved." 
+      });
       
       // Reset form
       setAmount("");
       setDescription("");
       setDate(new Date().toISOString().slice(0, 10));
       setIsPayLater(false);
+      setInstallments(1);
+      setStartMonth(new Date().toISOString().slice(0, 7));
       
       // Small delay to ensure DB has updated before closing
       setTimeout(() => {
@@ -345,7 +392,48 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
                 <p className="text-xs text-muted-foreground">
                   If enabled, this expense will be recorded under your PayLater/Debt account. Your cash accounts won’t go down until you record a payment.
                 </p>
-              </div>
+                {/* Installment options */}
+                {isPayLater && (
+                  <div className="space-y-3 pt-3 border-t">
+                    <div>
+                      <label htmlFor="installments" className="block text-sm font-medium mb-2">
+                        Installments
+                      </label>
+                      <select
+                        id="installments"
+                        value={installments}
+                        onChange={(e) => setInstallments(Number(e.target.value))}
+                        className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                      >
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
+                          <option key={n} value={n}>
+                            {n === 1 ? "Pay in full (1 month)" : `${n} months`}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {installments > 1 && (
+                      <>
+                        <div>
+                          <label htmlFor="startMonth" className="block text-sm font-medium mb-2">
+                            Start Month
+                          </label>
+                          <input
+                            type="month"
+                            id="startMonth"
+                            value={startMonth}
+                            onChange={(e) => setStartMonth(e.target.value)}
+                            className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                          />
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}              </div>
             )}
 
             {/* Transfer To Account */}
