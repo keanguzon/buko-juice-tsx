@@ -221,24 +221,27 @@ export default function AddTransactionForm() {
                   </select>
                 </div>
 
+                <div>
+                  <label htmlFor="startMonth" className="block text-sm font-medium mb-1">
+                    Payment Due (Start Month)
+                  </label>
+                  <input
+                    type="month"
+                    id="startMonth"
+                    value={startMonth}
+                    onChange={(e) => setStartMonth(e.target.value)}
+                    className="w-full rounded-md border px-3 py-2"
+                  />
+                </div>
                 {installments > 1 && (
-                  <>
-                    <div>
-                      <label htmlFor="startMonth" className="block text-sm font-medium mb-1">
-                        Start Month
-                      </label>
-                      <input
-                        type="month"
-                        id="startMonth"
-                        value={startMonth}
-                        onChange={(e) => setStartMonth(e.target.value)}
-                        className="w-full rounded-md border px-3 py-2"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
-                    </p>
-                  </>
+                  <p className="text-xs text-muted-foreground">
+                    ₱{(Number(amount) / installments || 0).toFixed(2)} per month for {installments} months
+                  </p>
+                )}
+                {installments === 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Full payment due in {startMonth}
+                  </p>
                 )}
               </div>
             )}
