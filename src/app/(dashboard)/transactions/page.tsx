@@ -52,19 +52,32 @@ export default function TransactionsPage() {
 
       // Revert balance based on transaction type
       if (transaction.type === "income") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
-        const newBal = Number(acc?.balance || 0) - amt;
+        const { data: acc } = await sb.from("accounts").select("balance,type").eq("id", transaction.account_id).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = acc?.type === "credit_card" ? current + amt : current - amt;
         await sb.from("accounts").update({ balance: newBal }).eq("id", transaction.account_id);
       } else if (transaction.type === "expense") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
-        const newBal = Number(acc?.balance || 0) + amt;
+        const { data: acc } = await sb.from("accounts").select("balance,type").eq("id", transaction.account_id).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = acc?.type === "credit_card" ? current - amt : current + amt;
         await sb.from("accounts").update({ balance: newBal }).eq("id", transaction.account_id);
       } else if (transaction.type === "transfer") {
-        const { data: src } = await sb.from("accounts").select("balance").eq("id", transaction.account_id).single();
-        const { data: dst } = await sb.from("accounts").select("balance").eq("id", transaction.transfer_to_account_id).single();
+        const { data: src } = await sb.from("accounts").select("balance,type").eq("id", transaction.account_id).single();
+        const { data: dst } = await sb.from("accounts").select("balance,type").eq("id", transaction.transfer_to_account_id).single();
         if (src && dst) {
-          await sb.from("accounts").update({ balance: Number(src.balance) + amt }).eq("id", transaction.account_id);
-          await sb.from("accounts").update({ balance: Number(dst.balance) - amt }).eq("id", transaction.transfer_to_account_id);
+          const srcCurrent = Number(src.balance);
+          const dstCurrent = Number(dst.balance);
+
+          // Reverting a transfer means undoing whatever we did during creation.
+          // Normal accounts: src + amt, dst - amt.
+          // Credit cards are debt-style:
+          // - If src is credit_card: creation did src + amt, so revert is src - amt.
+          // - If dst is credit_card: creation did dst - amt, so revert is dst + amt.
+          const nextSrc = src.type === "credit_card" ? srcCurrent - amt : srcCurrent + amt;
+          const nextDst = dst.type === "credit_card" ? dstCurrent + amt : dstCurrent - amt;
+
+          await sb.from("accounts").update({ balance: nextSrc }).eq("id", transaction.account_id);
+          await sb.from("accounts").update({ balance: nextDst }).eq("id", transaction.transfer_to_account_id);
         }
       }
 
@@ -97,9 +110,10 @@ export default function TransactionsPage() {
       const { data, error } = await sb
         .from("transactions")
         .select(
-          "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name)"
+          "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
         )
         .eq("user_id", session.user.id)
+        .order("created_at", { ascending: false })
         .order("date", { ascending: false })
         .limit(50);
 

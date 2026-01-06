@@ -29,6 +29,9 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
   const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
 
+  const [isPayLater, setIsPayLater] = useState(false);
+  const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
+
   useEffect(() => {
     if (isOpen) {
       loadData();
@@ -47,6 +50,13 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
     }
   }, [type, categories]);
 
+  useEffect(() => {
+    // PayLater mode only makes sense for expenses
+    if (type !== "expense") {
+      setIsPayLater(false);
+    }
+  }, [type]);
+
   const loadData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) return;
@@ -61,7 +71,12 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
 
     if (accountsList.length > 0) setAccountId(accountsList[0]?.id ?? "");
     if (catsList.length > 0) setCategoryId(catsList[0]?.id ?? "");
+
+    const firstCredit = accountsList.find((a: any) => a?.type === "credit_card");
+    if (firstCredit) setPayLaterAccountId(firstCredit.id);
   };
+
+  const getAccount = (id: string) => accounts.find((a: any) => a?.id === id);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -75,7 +90,8 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       }
 
       const amt = Number(amount);
-      if (!accountId || !Number.isFinite(amt) || amt <= 0) {
+      const effectiveAccountId = type === "expense" && isPayLater ? payLaterAccountId : accountId;
+      if (!effectiveAccountId || !Number.isFinite(amt) || amt <= 0) {
         toast({ title: "Missing fields", description: "Please select account and amount", variant: "destructive" });
         return;
       }
@@ -85,43 +101,36 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
         return;
       }
 
-      // Prevent negative balances (no overdraft)
+      if (type === "expense" && isPayLater && !effectiveAccountId) {
+        toast({ title: "Missing fields", description: "Please select a PayLater/Credit Card account", variant: "destructive" });
+        return;
+      }
+
+      // Prevent negative balances (no overdraft) for non-credit accounts.
       if (type === "expense" || type === "transfer") {
-        const { data: srcAcc, error: srcErr } = await sb
-          .from("accounts")
-          .select("id, name, balance")
-          .eq("id", accountId)
-          .single();
-
-        if (srcErr) {
-          toast({ title: "Error", description: srcErr.message, variant: "destructive" });
-          return;
-        }
-
-        const currentBal = Number(srcAcc?.balance || 0);
-        const nextBal = currentBal - amt;
-        if (nextBal < 0) {
-          toast({
-            title: "Not enough balance",
-            description: `Not enough money in ${srcAcc?.name || "this account"}. Available: ₱${currentBal.toFixed(2)}.`,
-            variant: "destructive",
-          });
-          return;
-        }
-
         if (type === "transfer") {
           if (!transferToAccountId) {
-            toast({
-              title: "Missing fields",
-              description: "Please select a destination account",
-              variant: "destructive",
-            });
+            toast({ title: "Missing fields", description: "Please select a destination account", variant: "destructive" });
             return;
           }
-          if (transferToAccountId === accountId) {
+          if (transferToAccountId === effectiveAccountId) {
+            toast({ title: "Invalid transfer", description: "Source and destination accounts must be different", variant: "destructive" });
+            return;
+          }
+        }
+
+        const srcAcc = getAccount(effectiveAccountId);
+        const srcType = srcAcc?.type;
+        const currentBal = Number(srcAcc?.balance || 0);
+
+        // Credit cards are tracked as "debt" (balance can grow with purchases).
+        // Only block overdraft for non-credit accounts.
+        if (srcType !== "credit_card") {
+          const nextBal = currentBal - amt;
+          if (nextBal < 0) {
             toast({
-              title: "Invalid transfer",
-              description: "Source and destination accounts must be different",
+              title: "Not enough balance",
+              description: `Not enough money in ${srcAcc?.name || "this account"}. Available: ₱${currentBal.toFixed(2)}.`,
               variant: "destructive",
             });
             return;
@@ -132,7 +141,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       // Insert transaction
       const { error } = await sb.from("transactions").insert({
         user_id: session.user.id,
-        account_id: accountId,
+        account_id: effectiveAccountId,
         category_id: type === "transfer" ? null : (categoryId || null),
         type,
         amount: amt,
@@ -147,22 +156,40 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       }
 
       // Update balances
+      const effAcc = getAccount(effectiveAccountId);
+      const effType = effAcc?.type;
+
       if (type === "income") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc?.balance || 0) + amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = effType === "credit_card" ? current - amt : current + amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else if (type === "expense") {
-        const { data: acc } = await sb.from("accounts").select("balance").eq("id", accountId).single();
-        const newBal = Number(acc?.balance || 0) - amt;
-        await sb.from("accounts").update({ balance: newBal }).eq("id", accountId);
+        const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
+        const current = Number(acc?.balance || 0);
+        const newBal = effType === "credit_card" ? current + amt : current - amt;
+        await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else if (type === "transfer") {
-        const { data: src } = await sb.from("accounts").select("balance").eq("id", accountId).single();
+        const { data: src } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
         const { data: dst } = await sb.from("accounts").select("balance").eq("id", transferToAccountId).single();
+
+        const srcMeta = getAccount(effectiveAccountId);
+        const dstMeta = getAccount(transferToAccountId);
+
         if (!dst) {
           toast({ title: "Error", description: "Transfer destination not found", variant: "destructive" });
         } else {
-          await sb.from("accounts").update({ balance: Number(src?.balance || 0) - amt }).eq("id", accountId);
-          await sb.from("accounts").update({ balance: Number(dst?.balance || 0) + amt }).eq("id", transferToAccountId);
+          const srcCurrent = Number(src?.balance || 0);
+          const dstCurrent = Number(dst?.balance || 0);
+
+          // For credit cards, balance is "debt":
+          // - Paying a credit card (transfer to credit_card) reduces debt (dst - amt)
+          // - Sending from credit card increases debt (src + amt)
+          const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
+          const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+
+          await sb.from("accounts").update({ balance: nextSrc }).eq("id", effectiveAccountId);
+          await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
         }
       }
 
@@ -172,6 +199,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
       setAmount("");
       setDescription("");
       setDate(new Date().toISOString().slice(0, 10));
+      setIsPayLater(false);
       
       // Small delay to ensure DB has updated before closing
       setTimeout(() => {
@@ -270,7 +298,7 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
             {/* Account */}
             <div>
               <label htmlFor="account" className="block text-sm font-medium mb-2">
-                {type === "transfer" ? "From Account" : "Account"}
+                {type === "transfer" ? "From Account" : isPayLater && type === "expense" ? "PayLater/Debt Account" : "Account"}
               </label>
               {accounts.length === 0 ? (
                 <p className="text-sm text-muted-foreground p-3 bg-slate-100 dark:bg-slate-900 rounded-lg">
@@ -279,17 +307,46 @@ export default function AddTransactionModal({ isOpen, onClose }: AddTransactionM
               ) : (
                 <select
                   id="account"
-                  value={accountId}
-                  onChange={(e) => setAccountId(e.target.value)}
+                  value={isPayLater && type === "expense" ? payLaterAccountId : accountId}
+                  onChange={(e) => {
+                    if (isPayLater && type === "expense") {
+                      setPayLaterAccountId(e.target.value);
+                    } else {
+                      setAccountId(e.target.value);
+                    }
+                  }}
                   className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
                   required
                 >
-                  {accounts.map((a) => (
+                  {(isPayLater && type === "expense" ? accounts.filter((a: any) => a?.type === "credit_card") : accounts).map((a: any) => (
                     <option value={a.id} key={a.id}>{a.name} - {a.currency}</option>
                   ))}
                 </select>
               )}
+              {isPayLater && type === "expense" && accounts.filter((a: any) => a?.type === "credit_card").length === 0 && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  No PayLater/Debt accounts yet. Create one in Accounts (type: Credit Card) and name it “SpayLater”.
+                </p>
+              )}
             </div>
+
+            {/* PayLater / Credit Card purchase */}
+            {type === "expense" && (
+              <div className="rounded-lg border p-4 space-y-3">
+                <label className="flex items-center gap-2 text-sm font-medium">
+                  <input
+                    type="checkbox"
+                    checked={isPayLater}
+                    onChange={(e) => setIsPayLater(e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  PayLater purchase (adds to debt)
+                </label>
+                <p className="text-xs text-muted-foreground">
+                  If enabled, this expense will be recorded under your PayLater/Debt account. Your cash accounts won’t go down until you record a payment.
+                </p>
+              </div>
+            )}
 
             {/* Transfer To Account */}
             {type === "transfer" && (

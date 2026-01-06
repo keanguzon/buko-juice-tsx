@@ -16,6 +16,7 @@ import Link from "next/link";
 
 export default function DashboardPage() {
   const supabase = createClient();
+  const sb = supabase as any;
   const [accounts, setAccounts] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
@@ -45,14 +46,23 @@ export default function DashboardPage() {
           .eq("is_active", true);
         setAccounts(accountsData ?? []);
 
-        // Get recent transactions - ONLY LATEST 3
-        const { data: transactionsData } = await supabase
+        // Get recent transactions (newest first)
+        const { data: transactionsData, error: txErr } = await sb
           .from("transactions")
-          .select("*, category:categories(*), account:accounts(*)")
+          .select(
+            "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
+          )
           .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
           .order("date", { ascending: false })
           .limit(3);
-        setTransactions(transactionsData ?? []);
+
+        if (txErr) {
+          console.error("Failed to load recent transactions", txErr);
+          setTransactions([]);
+        } else {
+          setTransactions(transactionsData ?? []);
+        }
 
         // This month's income/expenses
         const now = new Date();
