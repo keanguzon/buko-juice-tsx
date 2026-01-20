@@ -85,6 +85,69 @@ export default function AddTransactionForm() {
         return;
       }
 
+      // Month-level guard for debt payments (transfer TO credit card)
+      if (isDebtPayment) {
+        if (!transferToAccountId) {
+          toast({ title: "Missing fields", description: "Please select a destination account", variant: "destructive" });
+          return;
+        }
+        if (!debtPaymentMonth) {
+          toast({ title: "Missing month", description: "Please select a debt month to pay", variant: "destructive" });
+          return;
+        }
+
+        const creditId = transferToAccountId;
+        const start = `${debtPaymentMonth}-01`;
+        const nextMonth = new Date(`${debtPaymentMonth}-01T00:00:00`);
+        nextMonth.setMonth(nextMonth.getMonth() + 1);
+        const end = nextMonth.toISOString().slice(0, 10);
+
+        const { data: monthTx, error: monthTxErr } = await sb
+          .from("transactions")
+          .select("account_id, type, amount, date, transfer_to_account_id")
+          .eq("user_id", session.user.id)
+          .gte("date", start)
+          .lt("date", end)
+          .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`);
+
+        if (monthTxErr) {
+          toast({ title: "Error", description: "Failed to validate month debt", variant: "destructive" });
+          return;
+        }
+
+        let monthDebt = 0;
+        (monthTx || []).forEach((t: any) => {
+          const amtNum = Number(t?.amount || 0);
+          const isCreditSource = t?.account_id === creditId;
+          const isCreditDestination = t?.transfer_to_account_id === creditId;
+
+          if (t.type === "expense" && isCreditSource) monthDebt += amtNum;
+          else if (t.type === "income" && isCreditSource) monthDebt -= amtNum;
+          else if (t.type === "transfer") {
+            if (isCreditDestination) monthDebt -= amtNum;
+            if (isCreditSource) monthDebt += amtNum;
+          }
+        });
+
+        monthDebt = Math.max(0, Number(monthDebt || 0));
+        let label = debtPaymentMonth;
+        try {
+          const d = new Date(`${debtPaymentMonth}-01T00:00:00`);
+          label = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(d);
+        } catch {
+          // ignore
+        }
+
+        if (monthDebt <= 0) {
+          toast({ title: "No debt for this month", description: `There is no remaining debt for ${label}.`, variant: "destructive" });
+          return;
+        }
+        if (amt - monthDebt > 1e-9) {
+          toast({ title: "Payment too large", description: `Max for ${label} is ₱${monthDebt.toFixed(2)}.`, variant: "destructive" });
+          return;
+        }
+      }
+
       // Insert transaction(s) - for PayLater with installments, create multiple transactions
       if (type === "expense" && isPayLater && installments > 1) {
         const installmentAmount = amt / installments;
