@@ -260,6 +260,40 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       if (type === "transfer") {
         const dstMeta = getAccount(transferToAccountId);
         if (dstMeta?.type === "credit_card") {
+          // Month-level guard: only allow paying up to the selected month's remaining debt.
+          if (isDebtPayment) {
+            if (isDebtMonthLoading) {
+              toast({ title: "Please wait", description: "Loading debt month details...", variant: "destructive" });
+              return;
+            }
+
+            const monthDebt = Math.max(0, Number(selectedDebtMonthAmount || 0));
+            const label = selectedDebtMonthLabel || debtPaymentMonth;
+
+            if (!debtPaymentMonth) {
+              toast({ title: "Missing month", description: "Please select a debt month to pay", variant: "destructive" });
+              return;
+            }
+
+            if (monthDebt <= 0) {
+              toast({
+                title: "No debt for this month",
+                description: `There is no remaining debt for ${label}. Pick a different month.`,
+                variant: "destructive",
+              });
+              return;
+            }
+
+            if (amt - monthDebt > 1e-9) {
+              toast({
+                title: "Payment too large",
+                description: `Max for ${label} is ${formatCurrency(monthDebt, dstMeta?.currency || currency)}.`,
+                variant: "destructive",
+              });
+              return;
+            }
+          }
+
           const { data: dstRow, error: dstErr } = await sb
             .from("accounts")
             .select("balance")
