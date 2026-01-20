@@ -500,7 +500,7 @@ export default function AccountsPage() {
                       onDragOver={(e) => handleDragOver(e, index)}
                       onDragEnd={handleDragEnd}
                       onClick={() => {
-                        if (!isEditingOrder) {
+                        if (!isEditingOrder && account.type !== "credit_card") {
                           setDefaultTransactionAccountId(account.id);
                           setIsAddTransactionOpen(true);
                         }
@@ -508,6 +508,8 @@ export default function AccountsPage() {
                       className={
                         isEditingOrder
                           ? "cursor-move transition-all duration-200"
+                          : account.type === "credit_card"
+                          ? "transition-all duration-200"
                           : "cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       }
                     >
@@ -569,6 +571,20 @@ export default function AccountsPage() {
                             />
                             <span>%/yr</span>
                           </div>
+                        ) : null}
+                        {account?.type === "credit_card" && Number(account.balance) > 0 ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="mt-2 w-full text-xs hover:bg-primary hover:text-primary-foreground"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDefaultTransactionAccountId(account.id);
+                              setIsAddTransactionOpen(true);
+                            }}
+                          >
+                            Pay Debt
+                          </Button>
                         ) : null}
                       </CardContent>
                     </Card>
