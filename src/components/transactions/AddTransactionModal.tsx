@@ -31,6 +31,9 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
   const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
   const [currency, setCurrency] = useState("PHP");
+  const [debtPaymentMonth, setDebtPaymentMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+  const [debtByMonthForPaymentTarget, setDebtByMonthForPaymentTarget] = useState<Record<string, number>>({});
+  const [isDebtMonthLoading, setIsDebtMonthLoading] = useState(false);
 
   const [isPayLater, setIsPayLater] = useState(false);
   const [payLaterAccountId, setPayLaterAccountId] = useState<string>("");
@@ -91,12 +94,14 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
 
       if (preferred) {
         if (preferred?.type === "credit_card") {
-          setType("expense");
-          setIsPayLater(true);
-          setPayLaterAccountId(preferred.id);
-          // Fallback from-account for transfers if user switches type
+          // Credit card was clicked - set up as debt payment (transfer TO the credit card)
+          setType("transfer");
+          setTransferToAccountId(preferred.id);
+          const month = new Date().toISOString().slice(0, 7);
+          setDebtPaymentMonth(month);
+          setDate(`${month}-01`);
           const firstNonCredit = accountsList.find((a: any) => a?.type !== "credit_card");
-          setAccountId(firstNonCredit?.id ?? preferred.id);
+          if (firstNonCredit) setAccountId(firstNonCredit.id);
         } else {
           setAccountId(preferred.id);
         }
@@ -121,6 +126,81 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
   const transferToAccount = transferToAccountId ? getAccount(transferToAccountId) : null;
   const transferToBalance = Number(transferToAccount?.balance ?? 0);
   const transferToCurrency = transferToAccount?.currency || currency;
+  const isDebtPayment = type === "transfer" && transferToAccount?.type === "credit_card";
+
+  useEffect(() => {
+    const loadDebtByMonth = async () => {
+      if (!isDebtPayment || !transferToAccountId) {
+        setDebtByMonthForPaymentTarget({});
+        return;
+      }
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+
+      setIsDebtMonthLoading(true);
+      try {
+        const creditId = transferToAccountId;
+        const { data: txData, error: txErr } = await sb
+          .from("transactions")
+          .select("id, account_id, type, amount, date, transfer_to_account_id")
+          .eq("user_id", session.user.id)
+          .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`)
+          .order("date", { ascending: false })
+          .limit(5000);
+
+        if (txErr) {
+          console.error("Failed to load debt-by-month for payment target", txErr);
+          setDebtByMonthForPaymentTarget({});
+          return;
+        }
+
+        const byMonth: Record<string, number> = {};
+        (txData || []).forEach((t: any) => {
+          const monthKey = typeof t?.date === "string" ? t.date.slice(0, 7) : "unknown";
+          if (!monthKey || monthKey === "unknown") return;
+          if (!byMonth[monthKey]) byMonth[monthKey] = 0;
+
+          const amt = Number(t?.amount || 0);
+          const isCreditSource = t?.account_id === creditId;
+          const isCreditDestination = t?.transfer_to_account_id === creditId;
+
+          // Debt math rules for credit cards:
+          // - expense on credit_card increases debt
+          // - income on credit_card decreases debt
+          // - transfer TO credit_card decreases debt (payment)
+          // - transfer FROM credit_card increases debt (cash advance / movement)
+          if (t.type === "expense" && isCreditSource) byMonth[monthKey] += amt;
+          else if (t.type === "income" && isCreditSource) byMonth[monthKey] -= amt;
+          else if (t.type === "transfer") {
+            if (isCreditDestination) byMonth[monthKey] -= amt;
+            if (isCreditSource) byMonth[monthKey] += amt;
+          }
+        });
+
+        setDebtByMonthForPaymentTarget(byMonth);
+      } finally {
+        setIsDebtMonthLoading(false);
+      }
+    };
+
+    loadDebtByMonth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isDebtPayment, transferToAccountId]);
+
+  const selectedDebtMonthAmount = isDebtPayment
+    ? Math.max(0, Number(debtByMonthForPaymentTarget[debtPaymentMonth] || 0))
+    : 0;
+
+  const selectedDebtMonthLabel = (() => {
+    if (!debtPaymentMonth) return "";
+    try {
+      const d = new Date(`${debtPaymentMonth}-01T00:00:00`);
+      return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(d);
+    } catch {
+      return debtPaymentMonth;
+    }
+  })();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,6 +228,57 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       if (type === "expense" && isPayLater && !effectiveAccountId) {
         toast({ title: "Missing fields", description: "Please select a PayLater/Credit Card account", variant: "destructive" });
         return;
+      }
+
+      // Prevent negative debt on credit cards when reducing debt.
+      // - income on credit_card reduces debt (balance - amt)
+      // - transfer TO credit_card reduces debt (dst - amt)
+      if (type === "income") {
+        const accMeta = getAccount(effectiveAccountId);
+        if (accMeta?.type === "credit_card") {
+          const { data: accRow, error: accErr } = await sb
+            .from("accounts")
+            .select("balance")
+            .eq("id", effectiveAccountId)
+            .single();
+          if (accErr) {
+            toast({ title: "Error", description: "Failed to validate debt balance", variant: "destructive" });
+            return;
+          }
+          const currentDebt = Number(accRow?.balance || 0);
+          if (currentDebt - amt < 0) {
+            toast({
+              title: "Payment too large",
+              description: `This would make your debt negative. Current debt: ${formatCurrency(currentDebt, accMeta?.currency || currency)}.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
+      if (type === "transfer") {
+        const dstMeta = getAccount(transferToAccountId);
+        if (dstMeta?.type === "credit_card") {
+          const { data: dstRow, error: dstErr } = await sb
+            .from("accounts")
+            .select("balance")
+            .eq("id", transferToAccountId)
+            .single();
+          if (dstErr) {
+            toast({ title: "Error", description: "Failed to validate debt balance", variant: "destructive" });
+            return;
+          }
+          const currentDebt = Number(dstRow?.balance || 0);
+          if (currentDebt - amt < 0) {
+            toast({
+              title: "Payment too large",
+              description: `You can only pay up to ${formatCurrency(currentDebt, dstMeta?.currency || currency)} for this debt account.`,
+              variant: "destructive",
+            });
+            return;
+          }
+        }
       }
 
       // Prevent negative balances (no overdraft) for non-credit accounts.
@@ -217,18 +348,25 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else {
         // Single transaction
-        // For PayLater expenses, use startMonth date instead of current date
-        const transactionDate = (type === "expense" && isPayLater) 
+        const transactionDate = isDebtPayment
+          ? `${debtPaymentMonth}-01`
+          : (type === "expense" && isPayLater)
           ? new Date(startMonth + "-01").toISOString().slice(0, 10)
           : date;
-        
+        const finalDescription = (() => {
+          const trimmed = (description || "").trim();
+          if (trimmed) return trimmed;
+          if (!isDebtPayment) return "";
+          const label = selectedDebtMonthLabel || debtPaymentMonth;
+          return `Debt - ${label}`;
+        })();
         const { error } = await sb.from("transactions").insert({
           user_id: session.user.id,
           account_id: effectiveAccountId,
           category_id: type === "transfer" ? null : (categoryId || null),
           type,
           amount: amt,
-          description,
+          description: finalDescription,
           date: transactionDate,
           transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
         }).select();
@@ -409,11 +547,13 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
                   className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
                   required
                 >
-                  {(isPayLater && type === "expense" 
-                    ? accounts.filter((a: any) => a?.type === "credit_card") 
+                  {(isPayLater && type === "expense"
+                    ? accounts.filter((a: any) => a?.type === "credit_card")
                     : accounts.filter((a: any) => a?.type !== "credit_card")
                   ).map((a: any) => (
-                    <option value={a.id} key={a.id}>{a.name} - {a.currency}</option>
+                    <option value={a.id} key={a.id}>
+                      {a.name} - {a.currency}
+                    </option>
                   ))}
                 </select>
               )}
@@ -498,19 +638,55 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
                 <select
                   id="transferTo"
                   value={transferToAccountId}
-                  onChange={(e) => setTransferToAccountId(e.target.value)}
+                  onChange={(e) => {
+                    const nextId = e.target.value;
+                    setTransferToAccountId(nextId);
+                    const nextAcc = getAccount(nextId);
+                    if (nextAcc?.type === "credit_card") {
+                      const month = debtPaymentMonth || new Date().toISOString().slice(0, 7);
+                      setDebtPaymentMonth(month);
+                      setDate(`${month}-01`);
+                    }
+                  }}
                   className="w-full px-4 py-3 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
                   required
                 >
                   <option value="">Select destination account</option>
                   {accounts.filter(a => a.id !== accountId).map((a) => (
-                    <option value={a.id} key={a.id}>{a.name}</option>
+                    <option value={a.id} key={a.id}>
+                      {a.name}{a.type === "credit_card" ? " (Pay Debt)" : ""}
+                    </option>
                   ))}
                 </select>
                 {transferToAccount ? (
                   <p className="mt-2 text-xs text-muted-foreground">
                     Balance: <span className="font-medium text-foreground">{formatCurrency(transferToBalance, transferToCurrency)}</span>
                   </p>
+                ) : null}
+                {isDebtPayment ? (
+                  <div className="mt-3">
+                    <label htmlFor="debtMonth" className="block text-xs font-medium text-muted-foreground mb-1">
+                      Debt month to pay
+                    </label>
+                    <input
+                      type="month"
+                      id="debtMonth"
+                      value={debtPaymentMonth}
+                      onChange={(e) => {
+                        const month = e.target.value;
+                        setDebtPaymentMonth(month);
+                        if (month) setDate(`${month}-01`);
+                      }}
+                      className="w-full px-4 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700 focus:ring-2 focus:ring-primary transition-all"
+                    />
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Payment will be recorded under this month in your debt breakdown.
+                    </p>
+                    <p className="mt-2 text-base font-bold text-green-500">
+                      {selectedDebtMonthLabel}{" "}
+                      - {isDebtMonthLoading ? "Loading..." : formatCurrency(selectedDebtMonthAmount, transferToCurrency)}
+                    </p>
+                  </div>
                 ) : null}
               </div>
             )}

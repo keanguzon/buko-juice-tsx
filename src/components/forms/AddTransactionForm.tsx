@@ -24,6 +24,7 @@ export default function AddTransactionForm() {
   const [description, setDescription] = useState("");
   const [transferToAccountId, setTransferToAccountId] = useState<string>("");
   const [isLoading, setIsLoading] = useState(false);
+  const [debtPaymentMonth, setDebtPaymentMonth] = useState<string>(new Date().toISOString().slice(0, 7));
 
   const getAccount = (id: string) => accounts.find((a: any) => a?.id === id);
 
@@ -33,6 +34,8 @@ export default function AddTransactionForm() {
   const [startMonth, setStartMonth] = useState<string>(new Date().toISOString().slice(0, 7));
 
   const debtAccounts = accounts.filter((a: any) => a?.type === "credit_card");
+  const transferToAccount = transferToAccountId ? getAccount(transferToAccountId) : null;
+  const isDebtPayment = type === "transfer" && transferToAccount?.type === "credit_card";
 
   useEffect(() => {
     const load = async () => {
@@ -117,18 +120,31 @@ export default function AddTransactionForm() {
         await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
       } else {
         // Single transaction
-        // For PayLater expenses, use startMonth date instead of current date
-        const transactionDate = (type === "expense" && isPayLater) 
+        const transactionDate = isDebtPayment
+          ? `${debtPaymentMonth}-01`
+          : (type === "expense" && isPayLater)
           ? new Date(startMonth + "-01").toISOString().slice(0, 10)
           : date;
-        
+        const finalDescription = (() => {
+          const trimmed = (description || "").trim();
+          if (trimmed) return trimmed;
+          if (!isDebtPayment) return "";
+          let label = debtPaymentMonth;
+          try {
+            const d = new Date(`${debtPaymentMonth}-01T00:00:00`);
+            label = new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(d);
+          } catch {
+            // ignore
+          }
+          return `Debt - ${label}`;
+        })();
         const { error, data: inserted } = await sb.from("transactions").insert({
           user_id: session.user.id,
           account_id: effectiveAccountId,
           category_id: categoryId || null,
           type,
           amount: amt,
-          description,
+          description: finalDescription,
           date: transactionDate,
           transfer_to_account_id: type === "transfer" ? transferToAccountId || null : null,
         }).select();
@@ -143,6 +159,14 @@ export default function AddTransactionForm() {
           const meta = getAccount(effectiveAccountId);
           const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
           const current = Number(acc?.balance || 0);
+          if (meta?.type === "credit_card" && current - amt < 0) {
+            toast({
+              title: "Payment too large",
+              description: `This would make your debt negative. Current debt: ${current.toFixed(2)}.`,
+              variant: "destructive",
+            });
+            return;
+          }
           const newBal = meta?.type === "credit_card" ? current - amt : current + amt;
           await sb.from("accounts").update({ balance: newBal }).eq("id", effectiveAccountId);
         } else if (type === "expense") {
@@ -164,6 +188,14 @@ export default function AddTransactionForm() {
             const dstCurrent = Number(dst?.balance || 0);
             const nextSrc = srcMeta?.type === "credit_card" ? srcCurrent + amt : srcCurrent - amt;
             const nextDst = dstMeta?.type === "credit_card" ? dstCurrent - amt : dstCurrent + amt;
+            if (dstMeta?.type === "credit_card" && nextDst < 0) {
+              toast({
+                title: "Payment too large",
+                description: `You can only pay up to ${dstCurrent.toFixed(2)} for this debt account.`,
+                variant: "destructive",
+              });
+              return;
+            }
             await sb.from("accounts").update({ balance: nextSrc }).eq("id", accountId);
             await sb.from("accounts").update({ balance: nextDst }).eq("id", transferToAccountId);
           }
@@ -275,12 +307,48 @@ export default function AddTransactionForm() {
       {type === "transfer" && (
         <div>
           <label className="text-sm font-medium">Transfer to</label>
-          <select className="mt-1 w-full rounded-md border px-3 py-2" value={transferToAccountId} onChange={(e) => setTransferToAccountId(e.target.value)}>
+          <select
+            className="mt-1 w-full rounded-md border px-3 py-2"
+            value={transferToAccountId}
+            onChange={(e) => {
+              const nextId = e.target.value;
+              setTransferToAccountId(nextId);
+              const nextAcc = getAccount(nextId);
+              if (nextAcc?.type === "credit_card") {
+                const month = debtPaymentMonth || new Date().toISOString().slice(0, 7);
+                setDebtPaymentMonth(month);
+                setDate(`${month}-01`);
+              }
+            }}
+          >
             <option value="">Select destination account</option>
             {accounts.filter(a => a.id !== accountId).map((a) => (
-              <option value={a.id} key={a.id}>{a.name}</option>
+              <option value={a.id} key={a.id}>
+                {a.name}{a.type === "credit_card" ? " (Pay Debt)" : ""}
+              </option>
             ))}
           </select>
+          {isDebtPayment ? (
+            <div className="mt-2">
+              <label htmlFor="debtMonth" className="block text-xs font-medium text-muted-foreground mb-1">
+                Debt month to pay
+              </label>
+              <input
+                type="month"
+                id="debtMonth"
+                value={debtPaymentMonth}
+                onChange={(e) => {
+                  const month = e.target.value;
+                  setDebtPaymentMonth(month);
+                  if (month) setDate(`${month}-01`);
+                }}
+                className="w-full rounded-md border px-3 py-2"
+              />
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                Payment will be recorded under this month in your debt breakdown.
+              </p>
+            </div>
+          ) : null}
         </div>
       )}
 
