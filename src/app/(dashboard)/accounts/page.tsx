@@ -9,8 +9,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
+  DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -47,7 +46,7 @@ export default function AccountsPage() {
   const [isDebtLoading, setIsDebtLoading] = useState(false);
   const [debtByMonth, setDebtByMonth] = useState<Record<string, number>>({});
   const [expenseItemsByMonth, setExpenseItemsByMonth] = useState<Record<string, any[]>>({});
-  const [monthFilter, setMonthFilter] = useState<string>("all");
+  const [selectedDebtMonths, setSelectedDebtMonths] = useState<string[]>([]);
   const [previewAfterPay, setPreviewAfterPay] = useState(false);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -114,7 +113,7 @@ export default function AccountsPage() {
         if (creditIds.length === 0) {
           setDebtByMonth({});
           setExpenseItemsByMonth({});
-          setMonthFilter("all");
+          setSelectedDebtMonths([]);
         } else {
           const { data: txData, error: txErr } = await sb
             .from("transactions")
@@ -132,7 +131,7 @@ export default function AccountsPage() {
             console.error("Failed to load debt transactions", txErr);
             setDebtByMonth({});
             setExpenseItemsByMonth({});
-            setMonthFilter("all");
+            setSelectedDebtMonths([]);
           } else {
             const byMonth: Record<string, number> = {};
             const itemsByMonth: Record<string, any[]> = {};
@@ -164,9 +163,6 @@ export default function AccountsPage() {
 
             setDebtByMonth(byMonth);
             setExpenseItemsByMonth(itemsByMonth);
-
-            // If user had selected a month that no longer exists, reset to all
-            if (monthFilter !== "all" && !byMonth[monthFilter]) setMonthFilter("all");
           }
         }
       } finally {
@@ -226,12 +222,43 @@ export default function AccountsPage() {
     return keys;
   }, [debtByMonth]);
 
+  useEffect(() => {
+    setSelectedDebtMonths((prev) => {
+      if (sortedMonths.length === 0) return [];
+      if (!prev || prev.length === 0) return sortedMonths;
+
+      const valid = prev.filter((m) => sortedMonths.includes(m));
+      if (valid.length === 0) return sortedMonths;
+
+      const validSet = new Set(valid);
+      const ordered = sortedMonths.filter((m) => validSet.has(m));
+      if (ordered.length === sortedMonths.length) return sortedMonths;
+      return ordered;
+    });
+  }, [sortedMonths]);
+
+  const isAllMonthsSelected = useMemo(() => {
+    return sortedMonths.length > 0 && selectedDebtMonths.length === sortedMonths.length;
+  }, [selectedDebtMonths.length, sortedMonths.length]);
+
+  const selectedMonthsLabel = useMemo(() => {
+    if (sortedMonths.length === 0) return "All";
+    if (isAllMonthsSelected) return "All";
+    if (selectedDebtMonths.length === 1) return selectedDebtMonths[0];
+    return `${selectedDebtMonths.length} selected`;
+  }, [isAllMonthsSelected, selectedDebtMonths, sortedMonths.length]);
+
+  const selectedMonthsDetailLabel = useMemo(() => {
+    if (sortedMonths.length === 0) return "All months";
+    if (isAllMonthsSelected) return "All months";
+    return selectedDebtMonths.join(", ");
+  }, [isAllMonthsSelected, selectedDebtMonths, sortedMonths.length]);
+
   const selectedDebt = useMemo(() => {
-    if (monthFilter === "all") {
-      return Object.values(debtByMonth).reduce((sum, v) => sum + Math.max(0, Number(v || 0)), 0);
-    }
-    return Math.max(0, Number(debtByMonth[monthFilter] || 0));
-  }, [debtByMonth, monthFilter]);
+    if (sortedMonths.length === 0) return 0;
+    const months = isAllMonthsSelected ? sortedMonths : selectedDebtMonths;
+    return months.reduce((sum, m) => sum + Math.max(0, Number(debtByMonth[m] || 0)), 0);
+  }, [debtByMonth, isAllMonthsSelected, selectedDebtMonths, sortedMonths]);
 
   const previewMoney = useMemo(() => {
     if (!previewAfterPay) return currentMoney;
@@ -283,7 +310,7 @@ export default function AccountsPage() {
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <p className="text-sm text-muted-foreground">
-                    Debt selected ({monthFilter === "all" ? "All" : monthFilter})
+                    Debt selected ({selectedMonthsDetailLabel})
                   </p>
                   <p className="font-semibold text-red-500">
                     {isDebtLoading ? "Loading..." : formatCurrency(selectedDebt, currency)}
@@ -304,21 +331,54 @@ export default function AccountsPage() {
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button size="sm" variant="outline" disabled={isDebtLoading || sortedMonths.length === 0}>
-                        {monthFilter === "all" ? "All months" : monthFilter}
+                        {isAllMonthsSelected ? "All months" : selectedMonthsLabel}
                         <ChevronDown className="ml-2 h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-56">
                       <DropdownMenuLabel>Debt months</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuRadioGroup value={monthFilter} onValueChange={setMonthFilter}>
-                        <DropdownMenuRadioItem value="all">All months</DropdownMenuRadioItem>
-                        {sortedMonths.map((m) => (
-                          <DropdownMenuRadioItem key={m} value={m}>
-                            {m}
-                          </DropdownMenuRadioItem>
-                        ))}
-                      </DropdownMenuRadioGroup>
+                      <DropdownMenuCheckboxItem
+                        checked={isAllMonthsSelected}
+                        onSelect={(e) => e.preventDefault()}
+                        onCheckedChange={(checked) => {
+                          const next = checked === true;
+                          if (next) {
+                            setSelectedDebtMonths(sortedMonths);
+                            return;
+                          }
+                          // Keep at least one month selected; fall back to latest month.
+                          setSelectedDebtMonths(sortedMonths.length > 0 ? [sortedMonths[0]] : []);
+                        }}
+                        className="border-l-2 border-transparent data-[state=checked]:border-primary"
+                      >
+                        All months
+                      </DropdownMenuCheckboxItem>
+                      <DropdownMenuSeparator />
+                      {sortedMonths.map((m) => (
+                        <DropdownMenuCheckboxItem
+                          key={m}
+                          checked={selectedDebtMonths.includes(m)}
+                          onSelect={(e) => e.preventDefault()}
+                          onCheckedChange={(checked) => {
+                            const next = checked === true;
+                            setSelectedDebtMonths((prev) => {
+                              const prevSet = new Set(prev && prev.length > 0 ? prev : sortedMonths);
+
+                              if (next) prevSet.add(m);
+                              else prevSet.delete(m);
+
+                              if (prevSet.size === 0) return sortedMonths;
+                              if (prevSet.size === sortedMonths.length) return sortedMonths;
+
+                              return sortedMonths.filter((x) => prevSet.has(x));
+                            });
+                          }}
+                          className="border-l-2 border-transparent data-[state=checked]:border-primary"
+                        >
+                          {m}
+                        </DropdownMenuCheckboxItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
