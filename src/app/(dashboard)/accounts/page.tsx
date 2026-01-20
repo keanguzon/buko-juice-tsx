@@ -4,6 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { formatCurrency } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -42,6 +43,7 @@ export default function AccountsPage() {
   const [defaultTransactionAccountId, setDefaultTransactionAccountId] = useState<string | undefined>(undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [currency, setCurrency] = useState("PHP");
+  const [interestRateDraft, setInterestRateDraft] = useState<Record<string, string>>({});
 
   const [isDebtLoading, setIsDebtLoading] = useState(false);
   const [debtByMonth, setDebtByMonth] = useState<Record<string, number>>({});
@@ -59,6 +61,54 @@ export default function AccountsPage() {
   useEffect(() => {
     loadAccounts();
   }, []);
+
+  useEffect(() => {
+    setInterestRateDraft((prev) => {
+      const next = { ...prev };
+      for (const acc of accounts || []) {
+        if (!acc?.id) continue;
+        if (!acc?.is_savings) continue;
+        if (next[acc.id] === undefined) {
+          next[acc.id] = String(Number(acc?.interest_rate || 0));
+        }
+      }
+      return next;
+    });
+  }, [accounts]);
+
+  const saveInterestRate = async (accountId: string) => {
+    const raw = (interestRateDraft[accountId] ?? "").trim();
+    const parsed = raw === "" ? 0 : Number(raw);
+    const nextRate = Number.isFinite(parsed) ? Math.max(0, parsed) : 0;
+
+    const currentAcc = accounts.find((a) => a?.id === accountId);
+    const currentRate = Number(currentAcc?.interest_rate || 0);
+    if (!currentAcc || !currentAcc?.is_savings) return;
+    if (Math.abs(currentRate - nextRate) < 1e-9) return;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const { error } = await sb
+      .from("accounts")
+      .update({ interest_rate: nextRate })
+      .eq("id", accountId)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      console.error("Failed to update interest rate", error);
+      // Revert draft back to stored value
+      setInterestRateDraft((prev) => ({ ...prev, [accountId]: String(currentRate) }));
+      return;
+    }
+
+    setAccounts((prev) =>
+      prev.map((a) => (a?.id === accountId ? { ...a, interest_rate: nextRate } : a))
+    );
+    setInterestRateDraft((prev) => ({ ...prev, [accountId]: String(nextRate) }));
+  };
 
   const loadAccounts = async () => {
     setIsLoading(true);
@@ -490,6 +540,36 @@ export default function AccountsPage() {
                         <p className="text-xs text-muted-foreground">
                           {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
                         </p>
+                        {account?.is_savings ? (
+                          <div
+                            className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <span>Interest:</span>
+                            <Input
+                              inputMode="decimal"
+                              type="number"
+                              step="0.01"
+                              min={0}
+                              className="h-7 w-20 px-2 text-xs"
+                              value={interestRateDraft[account.id] ?? String(Number(account?.interest_rate || 0))}
+                              onChange={(e) =>
+                                setInterestRateDraft((prev) => ({
+                                  ...prev,
+                                  [account.id]: e.target.value,
+                                }))
+                              }
+                              onBlur={() => saveInterestRate(account.id)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  (e.currentTarget as HTMLInputElement).blur();
+                                }
+                              }}
+                              aria-label="Interest rate percent per year"
+                            />
+                            <span>%/yr</span>
+                          </div>
+                        ) : null}
                       </CardContent>
                     </Card>
                   );
