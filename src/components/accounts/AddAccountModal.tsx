@@ -64,16 +64,16 @@ export default function AddAccountModal({ isOpen, onClose, existingAccounts }: A
 
     try {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (!session?.user?.id) {
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to add accounts", variant: "destructive" });
         return;
       }
 
       const { error } = await supabase.from("accounts").insert([{
-        user_id: session.user.id,
+        user_id: user.id,
         name: selectedAccount.name,
         type: selectedAccount.type,
         balance: Number(balance || 0),

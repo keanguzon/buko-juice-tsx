@@ -69,17 +69,17 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
   }, [type]);
 
   const loadData = async (preferredAccountId?: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
     const { data: pref } = await supabase
       .from("user_preferences")
       .select("currency")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
     if (pref && (pref as any).currency) setCurrency((pref as any).currency);
 
-    const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
+    const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", user.id).order("name");
     const accountsList = (accountsData ?? []) as any[];
     setAccounts(accountsList);
 
@@ -135,8 +135,8 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
 
       setIsDebtMonthLoading(true);
       try {
@@ -144,7 +144,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         const { data: txData, error: txErr } = await sb
           .from("transactions")
           .select("id, account_id, type, amount, date, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`)
           .order("date", { ascending: false })
           .limit(5000);
@@ -207,8 +207,8 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to add transactions", variant: "destructive" });
         return;
       }
@@ -358,7 +358,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
           const dateStr = installmentDate.toISOString().slice(0, 10);
           
           transactions.push({
-            user_id: session.user.id,
+            user_id: user.id,
             account_id: effectiveAccountId,
             category_id: categoryId || null,
             type,
@@ -395,7 +395,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
           return `Debt - ${label}`;
         })();
         const { error } = await sb.from("transactions").insert({
-          user_id: session.user.id,
+          user_id: user.id,
           account_id: effectiveAccountId,
           category_id: type === "transfer" ? null : (categoryId || null),
           type,

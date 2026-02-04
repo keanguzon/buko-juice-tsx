@@ -39,10 +39,10 @@ export default function AddTransactionForm() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
 
-      const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
+      const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", user.id).order("name");
       const accountsList = (accountsData ?? []) as any[];
       setAccounts(accountsList);
 
@@ -72,8 +72,8 @@ export default function AddTransactionForm() {
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to add transactions", variant: "destructive" });
         return;
       }
@@ -105,7 +105,7 @@ export default function AddTransactionForm() {
         const { data: monthTx, error: monthTxErr } = await sb
           .from("transactions")
           .select("account_id, type, amount, date, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .gte("date", start)
           .lt("date", end)
           .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`);
@@ -159,7 +159,7 @@ export default function AddTransactionForm() {
           const dateStr = installmentDate.toISOString().slice(0, 10);
           
           transactions.push({
-            user_id: session.user.id,
+            user_id: user.id,
             account_id: effectiveAccountId,
             category_id: categoryId || null,
             type,
@@ -202,7 +202,7 @@ export default function AddTransactionForm() {
           return `Debt - ${label}`;
         })();
         const { error, data: inserted } = await sb.from("transactions").insert({
-          user_id: session.user.id,
+          user_id: user.id,
           account_id: effectiveAccountId,
           category_id: categoryId || null,
           type,

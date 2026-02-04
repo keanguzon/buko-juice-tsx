@@ -27,13 +27,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       let userCurrency = "PHP";
-      if (session?.user?.id) {
+      if (user?.id) {
         const { data: pref } = await supabase
           .from("user_preferences")
           .select("currency")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .single();
         if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
         setCurrency(userCurrency);
@@ -42,7 +42,7 @@ export default function DashboardPage() {
         const { data: accountsData } = await supabase
           .from("accounts")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         setAccounts(accountsData ?? []);
 
@@ -52,7 +52,7 @@ export default function DashboardPage() {
           .select(
             "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
           )
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .order("date", { ascending: false })
           .limit(3);
@@ -70,7 +70,7 @@ export default function DashboardPage() {
         const { data: monthTransactionsData } = await supabase
           .from("transactions")
           .select("type, amount, account_id, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .gte("date", startOfMonth);
 
         const monthTransactions = (monthTransactionsData ?? []) as any[];
