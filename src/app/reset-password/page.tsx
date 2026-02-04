@@ -107,7 +107,7 @@ export default function ResetPasswordPage() {
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center space-x-2">
-              <Image src="/logos/main-logo.png" alt="Buko Juice Logo" width={40} height={40} className="h-10 w-10" />
+              <Image src="/logos/main-logo.webp" alt="Buko Juice Logo" width={40} height={40} className="h-10 w-10" />
               <span className="text-2xl font-bold">Buko Juice</span>
             </Link>
           </div>

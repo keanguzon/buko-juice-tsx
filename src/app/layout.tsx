@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: "Track your finances with ease. Manage expenses, income, accounts, and categories.",
   keywords: ["money tracker", "finance", "expenses", "accounts", "categories"],
   icons: {
-    icon: "/logos/main-logo.png",
+    icon: "/logos/main-logo-256.png",
   },
 };
 
