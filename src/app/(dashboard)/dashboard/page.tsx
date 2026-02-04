@@ -114,7 +114,7 @@ export default function DashboardPage() {
   }, []);
 
   const currentMoney = accounts
-    .filter((a: any) => a?.type !== "credit_card")
+    .filter((a: any) => a?.type !== "credit_card" && a?.include_in_networth !== false)
     .reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   const statCards = [
     {
