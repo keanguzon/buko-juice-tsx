@@ -106,31 +106,31 @@ export default function TransactionDetailModal({
               </div>
             </div>
 
-            {/* Account */}
+            {/* Wallet */}
             <div className="flex items-start gap-4">
               <div className="mt-1 p-2 rounded-lg bg-slate-100 dark:bg-slate-800">
                 <Wallet className="h-4 w-4 text-slate-500" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
-                  {transaction.type === "transfer" ? "Source Account" : "Account"}
+                  {transaction.type === "transfer" ? "Source Wallet" : "Wallet"}
                 </p>
                 <p className="font-medium text-slate-900 dark:text-slate-100">
-                  {transaction.account?.name || "Unknown Account"}
+                  {transaction.account?.name || "Unknown Wallet"}
                 </p>
               </div>
             </div>
 
-            {/* Transfer To Account */}
+            {/* Transfer To Wallet */}
             {transaction.type === "transfer" && (
               <div className="flex items-start gap-4">
                 <div className="mt-1 p-2 rounded-lg bg-blue-500/10">
                   <ArrowLeftRight className="h-4 w-4 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Destination Account</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Destination Wallet</p>
                   <p className="font-medium text-slate-900 dark:text-slate-100">
-                    {transaction.transfer_to_account?.name || "Unknown Account"}
+                    {transaction.transfer_to_account?.name || "Unknown Wallet"}
                   </p>
                 </div>
               </div>

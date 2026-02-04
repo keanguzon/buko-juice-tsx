@@ -17,9 +17,28 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [hasSession, setHasSession] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
   const supabase = createClient();
+
+  useEffect(() => {
+    // Check if user has a valid recovery session
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        setHasSession(true);
+      } else {
+        toast({
+          title: "Invalid or expired link",
+          description: "Please request a new password reset link.",
+          variant: "destructive",
+        });
+        setTimeout(() => router.push("/forgot-password"), 2000);
+      }
+    };
+    checkSession();
+  }, [router, supabase, toast]);
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +117,13 @@ export default function ResetPasswordPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {!isSuccess ? (
+          {!hasSession ? (
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-destructive/10 rounded-lg">
+                <p className="text-sm">Verifying reset link...</p>
+              </div>
+            </div>
+          ) : !isSuccess ? (
             <form onSubmit={handleResetPassword} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="password">New Password</Label>
