@@ -8,14 +8,14 @@ export default function NewAccountPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Add Account</h2>
-          <p className="text-muted-foreground">Create a new account for your finances</p>
+          <h2 className="text-3xl font-bold tracking-tight">Add Wallet</h2>
+          <p className="text-muted-foreground">Create a new wallet for your finances</p>
         </div>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>New account</CardTitle>
+          <CardTitle>New wallet</CardTitle>
         </CardHeader>
         <CardContent>
           <AddAccountForm />

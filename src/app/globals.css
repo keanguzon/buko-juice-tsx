@@ -72,42 +72,31 @@
     @apply bg-background text-foreground;
   }
 
-  /* Smooth color transitions for ALL elements - like X/Twitter */
+  /* Smooth color transitions for theme switching - prevent flickering */
+  /* Synchronized transitions: all elements change at EXACTLY the same time */
   *,
   *::before,
   *::after {
-    transition: background-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                border-color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                color 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                fill 300ms cubic-bezier(0.4, 0, 0.2, 1),
-                stroke 300ms cubic-bezier(0.4, 0, 0.2, 1) !important;
+    transition: background-color 150ms ease,
+                border-color 150ms ease,
+                fill 150ms ease,
+                stroke 150ms ease !important;
   }
 
-  /* Ensure text-heavy elements (incl. bold headings) transition together */
-  h1,
-  h2,
-  h3,
-  h4,
-  h5,
-  h6,
-  p,
-  span,
-  a,
-  strong,
-  b,
-  label,
-  button,
-  input,
-  textarea,
-  select {
-    transition: color var(--animation-duration-normal) var(--animation-ease),
-      background-color var(--animation-duration-normal) var(--animation-ease),
-      border-color var(--animation-duration-normal) var(--animation-ease);
+  /* Text elements: no color transition to prevent flickering, but keep bg in sync */
+  h1, h2, h3, h4, h5, h6, p, span, a, strong, b, label, div {
+    transition: background-color 150ms ease,
+                border-color 150ms ease !important;
   }
+}
 
-  svg {
-    transition: fill var(--animation-duration-normal) var(--animation-ease),
-      stroke var(--animation-duration-normal) var(--animation-ease);
+/* Theme overlay fade animation */
+@keyframes theme-overlay-fade {
+  0% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 0;
   }
 }
 

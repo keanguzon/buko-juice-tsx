@@ -216,17 +216,17 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       const amt = Number(amount);
       const effectiveAccountId = type === "expense" && isPayLater ? payLaterAccountId : accountId;
       if (!effectiveAccountId || !Number.isFinite(amt) || amt <= 0) {
-        toast({ title: "Missing fields", description: "Please select account and amount", variant: "destructive" });
+        toast({ title: "Missing fields", description: "Please select wallet and amount", variant: "destructive" });
         return;
       }
 
       if (accounts.length === 0) {
-        toast({ title: "No accounts", description: "Please create an account first", variant: "destructive" });
+        toast({ title: "No wallets", description: "Please create a wallet first", variant: "destructive" });
         return;
       }
 
       if (type === "expense" && isPayLater && !effectiveAccountId) {
-        toast({ title: "Missing fields", description: "Please select a PayLater/Credit Card account", variant: "destructive" });
+        toast({ title: "Missing fields", description: "Please select a PayLater/Credit Card wallet", variant: "destructive" });
         return;
       }
 
@@ -319,11 +319,11 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       if (type === "expense" || type === "transfer") {
         if (type === "transfer") {
           if (!transferToAccountId) {
-            toast({ title: "Missing fields", description: "Please select a destination account", variant: "destructive" });
+            toast({ title: "Missing fields", description: "Please select a destination wallet", variant: "destructive" });
             return;
           }
           if (transferToAccountId === effectiveAccountId) {
-            toast({ title: "Invalid transfer", description: "Source and destination accounts must be different", variant: "destructive" });
+            toast({ title: "Invalid transfer", description: "Source and destination wallets must be different", variant: "destructive" });
             return;
           }
         }
@@ -333,13 +333,13 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         const currentBal = Number(srcAcc?.balance || 0);
 
         // Credit cards are tracked as "debt" (balance can grow with purchases).
-        // Only block overdraft for non-credit accounts.
+        // Only block overdraft for non-credit wallets.
         if (srcType !== "credit_card") {
           const nextBal = currentBal - amt;
           if (nextBal < 0) {
             toast({
               title: "Not enough balance",
-              description: `Not enough money in ${srcAcc?.name || "this account"}. Available: ₱${currentBal.toFixed(2)}.`,
+              description: `Not enough money in ${srcAcc?.name || "this wallet"}. Available: ₱${currentBal.toFixed(2)}.`,
               variant: "destructive",
             });
             return;

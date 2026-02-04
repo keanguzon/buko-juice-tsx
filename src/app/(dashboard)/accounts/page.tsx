@@ -14,9 +14,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, GripVertical, Edit2 } from "lucide-react";
+import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, GripVertical, Edit2, Trash2 } from "lucide-react";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
+import { useToast } from "@/components/ui/use-toast";
 
 const accountTypeIcons = {
   cash: Wallet,
@@ -52,6 +53,8 @@ export default function AccountsPage() {
   const [previewAfterPay, setPreviewAfterPay] = useState(false);
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const { toast } = useToast();
 
   const normalizeLogoFilename = (filename: string) => {
     const cleaned = filename.replace(/^\/?logos\//i, "").replace(/^\//, "");
@@ -108,6 +111,64 @@ export default function AccountsPage() {
       prev.map((a) => (a?.id === accountId ? { ...a, interest_rate: nextRate } : a))
     );
     setInterestRateDraft((prev) => ({ ...prev, [accountId]: String(nextRate) }));
+  };
+
+  const toggleIncludeInNetworth = async (accountId: string) => {
+    const currentAcc = accounts.find((a) => a?.id === accountId);
+    if (!currentAcc) return;
+
+    const newValue = !currentAcc.include_in_networth;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const { error } = await sb
+      .from("accounts")
+      .update({ include_in_networth: newValue })
+      .eq("id", accountId)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      console.error("Failed to update include_in_networth", error);
+      return;
+    }
+
+    setAccounts((prev) =>
+      prev.map((a) => (a?.id === accountId ? { ...a, include_in_networth: newValue } : a))
+    );
+  };
+
+  const deleteAccount = async (accountId: string) => {
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.user?.id) return;
+
+    const { error } = await sb
+      .from("accounts")
+      .delete()
+      .eq("id", accountId)
+      .eq("user_id", session.user.id);
+
+    if (error) {
+      console.error("Failed to delete wallet", error);
+      toast({
+        title: "Error",
+        description: "Failed to delete wallet. It may have associated transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Wallet deleted",
+      description: "The wallet has been successfully deleted.",
+    });
+
+    setAccountToDelete(null);
+    loadAccounts();
   };
 
   const loadAccounts = async () => {
@@ -262,12 +323,16 @@ export default function AccountsPage() {
 
   const currentMoney = useMemo(() => {
     return accounts
-      .filter((a: any) => a?.type !== "credit_card")
+      .filter((a: any) => a?.type !== "credit_card" && a?.include_in_networth !== false)
       .reduce((sum, acc) => sum + Number(acc.balance), 0);
   }, [accounts]);
 
   const sortedMonths = useMemo(() => {
-    const keys = Object.keys(debtByMonth).filter((k) => k && k !== "unknown");
+    const keys = Object.keys(debtByMonth).filter((k) => {
+      if (!k || k === "unknown") return false;
+      const debt = Math.max(0, Number(debtByMonth[k] || 0));
+      return debt > 0; // Only show months with outstanding debt
+    });
     keys.sort((a, b) => (a < b ? 1 : -1));
     return keys;
   }, [debtByMonth]);
@@ -322,21 +387,21 @@ export default function AccountsPage() {
         <div className="space-y-3">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-1">
-              <h2 className="text-3xl font-bold tracking-tight">Accounts</h2>
+              <h2 className="text-3xl font-bold tracking-tight">Wallets</h2>
               <p className="text-muted-foreground">
-                Manage your financial accounts
+                Manage your financial wallets and accounts
               </p>
             </div>
             {/* Button visible only on desktop */}
-            <Button onClick={() => setIsModalOpen(true)} className="hidden sm:flex transition-all hover:scale-105 hover:shadow-lg">
+            <Button onClick={() => setIsModalOpen(true)} className="hidden sm:flex transition-all duration-200 hover:scale-105 hover:shadow-lg">
               <Plus className="mr-2 h-4 w-4" />
-              Add Account
+              Add Wallet
             </Button>
           </div>
           {/* Button visible only on mobile - below description */}
-          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:hidden transition-all hover:scale-105 hover:shadow-lg">
+          <Button onClick={() => setIsModalOpen(true)} className="w-full sm:hidden transition-all duration-200 hover:scale-105 hover:shadow-lg">
             <Plus className="mr-2 h-4 w-4" />
-            Add Account
+            Add Wallet
           </Button>
         </div>
 
@@ -451,8 +516,8 @@ export default function AccountsPage() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Accounts</CardTitle>
-                <CardDescription>Your financial accounts</CardDescription>
+                <CardTitle>Wallets</CardTitle>
+                <CardDescription>Your financial wallets and accounts</CardDescription>
               </div>
               {!isEditingOrder ? (
                 <Button
@@ -518,7 +583,18 @@ export default function AccountsPage() {
                           {account.name}
                         </CardTitle>
                         <div className="flex items-center gap-2">
-                          {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : null}
+                          {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setAccountToDelete(account.id);
+                              }}
+                              className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                              title="Delete wallet"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </button>
+                          )}
                           <div
                             className="p-2 rounded-full transition-all duration-200 hover:scale-110"
                             style={{ backgroundColor: `${account.color}20` }}
@@ -542,6 +618,26 @@ export default function AccountsPage() {
                         <p className="text-xs text-muted-foreground">
                           {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
                         </p>
+                        {account?.type !== "credit_card" && (
+                          <div
+                            className="mt-2 flex items-center gap-2"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              id={`networth-${account.id}`}
+                              checked={account.include_in_networth !== false}
+                              onChange={() => toggleIncludeInNetworth(account.id)}
+                              className="h-4 w-4 cursor-pointer"
+                            />
+                            <label
+                              htmlFor={`networth-${account.id}`}
+                              className="text-xs text-muted-foreground cursor-pointer select-none"
+                            >
+                              Include in Net Worth
+                            </label>
+                          </div>
+                        )}
                         {account?.is_savings ? (
                           <div
                             className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
@@ -594,13 +690,13 @@ export default function AccountsPage() {
             ) : !isLoading ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
-                <p className="text-lg font-medium">No accounts yet</p>
+                <p className="text-lg font-medium">No wallets yet</p>
                 <p className="text-sm text-muted-foreground mb-4">
-                  Add your first account to start tracking
+                  Add your first wallet to start tracking
                 </p>
                 <Button onClick={() => setIsModalOpen(true)} className="transition-all hover:scale-105">
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Account
+                  Add Wallet
                 </Button>
               </div>
             ) : (
@@ -663,7 +759,7 @@ export default function AccountsPage() {
         </Card>
       </div>
 
-      {/* Add Account Modal */}
+      {/* Add Wallet Modal */}
       <AddAccountModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -682,6 +778,27 @@ export default function AccountsPage() {
           loadAccounts();
         }}
       />
+
+      {/* Delete Account Confirmation Modal */}
+      {accountToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAccountToDelete(null)}>
+          <div className="bg-card border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-xl font-semibold mb-4 text-destructive">Delete Wallet</h3>
+            <p className="text-muted-foreground mb-6">
+              Are you sure you want to delete this wallet? This action cannot be undone.
+              All transactions associated with this wallet will also be deleted.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => setAccountToDelete(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={() => deleteAccount(accountToDelete)}>
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

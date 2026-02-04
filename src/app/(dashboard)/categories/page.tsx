@@ -74,13 +74,13 @@ export default function CategoriesPage() {
             </p>
           </div>
           {/* Button visible only on desktop */}
-          <Button onClick={() => setIsModalOpen(true)} className="hidden sm:flex transition-all hover:scale-105 hover:shadow-lg">
+          <Button onClick={() => setIsModalOpen(true)} className="hidden sm:flex transition-all duration-300 ease-out hover:scale-105 hover:shadow-lg">
             <Plus className="mr-2 h-4 w-4" />
             Add Category
           </Button>
         </div>
         {/* Button visible only on mobile - below description */}
-        <Button onClick={() => setIsModalOpen(true)} className="w-full sm:hidden transition-all hover:scale-105 hover:shadow-lg">
+        <Button onClick={() => setIsModalOpen(true)} className="w-full sm:hidden transition-all duration-300 ease-out hover:scale-105 hover:shadow-lg">
           <Plus className="mr-2 h-4 w-4" />
           Add Category
         </Button>
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
               {!isLoading && incomeCategories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-[transform,background-color,border-color,box-shadow] duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md"
                 >
                   <div className="flex items-center gap-3">
                     <div
@@ -133,7 +133,7 @@ export default function CategoriesPage() {
               {!isLoading && expenseCategories.map((category) => (
                 <div
                   key={category.id}
-                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-colors"
+                  className="flex items-center justify-between p-3 rounded-lg border hover:bg-accent/50 transition-[transform,background-color,border-color,box-shadow] duration-200 ease-in-out hover:scale-[1.02] hover:shadow-md"
                 >
                   <div className="flex items-center gap-3">
                     <div

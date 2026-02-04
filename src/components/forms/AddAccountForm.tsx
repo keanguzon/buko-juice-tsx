@@ -57,7 +57,7 @@ export default function AddAccountForm() {
       } = await supabase.auth.getSession();
 
       if (!session?.user?.id) {
-        toast({ title: "Not signed in", description: "You must be signed in to add accounts", variant: "destructive" });
+        toast({ title: "Not signed in", description: "You must be signed in to add wallets", variant: "destructive" });
         return;
       }
 
@@ -76,7 +76,7 @@ export default function AddAccountForm() {
         return;
       }
 
-      toast({ title: "Account added", description: "Your account was created successfully." });
+      toast({ title: "Wallet added", description: "Your wallet was created successfully." });
       router.push("/accounts");
       router.refresh();
     } catch (err) {
@@ -158,7 +158,7 @@ export default function AddAccountForm() {
       )}
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Create Account"}</Button>
+        <Button type="submit" disabled={isLoading}>{isLoading ? "Saving..." : "Create Wallet"}</Button>
         <Button variant="ghost" onClick={() => { window.history.back(); }}>Cancel</Button>
       </div>
     </form>

@@ -4,7 +4,6 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/components/ui/use-toast";
-import { useTheme } from "next-themes";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,8 +13,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Bell, LogOut, Menu, Moon, Settings, Sun, User as UserIcon } from "lucide-react";
+import { LogOut, Menu, Settings, User as UserIcon } from "lucide-react";
 import { getInitials } from "@/lib/utils";
+import { ModeToggle } from "@/components/ui/mode-toggle";
 
 interface HeaderProps {
   user: {
@@ -30,7 +30,6 @@ export function Header({ user, onMenuClick }: HeaderProps) {
   const router = useRouter();
   const supabase = createClient();
   const { toast } = useToast();
-  const { theme, setTheme } = useTheme();
 
   const handleSignOut = async () => {
     const { error } = await supabase.auth.signOut();
@@ -65,15 +64,7 @@ export function Header({ user, onMenuClick }: HeaderProps) {
 
       <div className="flex items-center gap-2 md:gap-4">
         {/* Theme toggle */}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-        >
-          <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-          <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-          <span className="sr-only">Toggle theme</span>
-        </Button>
+        <ModeToggle />
 
 
         {/* User menu */}
