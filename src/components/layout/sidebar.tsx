@@ -56,7 +56,6 @@ export function Sidebar({
           "fixed left-0 top-0 z-50 h-screen border-r bg-card",
           "transition-[width,transform,background-color,border-color] duration-300 ease-in-out",
           isCollapsed ? "w-16" : "w-64",
-          // Mobile: hide by default, show when isOpen
           "lg:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
@@ -98,7 +97,7 @@ export function Sidebar({
                     : "text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:scale-[1.02]"
                 )}
               >
-                <item.icon className={cn("h-5 w-5 transition-[margin,color] duration-200 ease-in-out", !isCollapsed && "mr-3")} />
+                <item.icon className={cn("h-5 w-5 transition-[margin,color,fill] duration-200 ease-in-out", !isCollapsed && "mr-3")} />
                 {!isCollapsed && <span className="transition-[opacity,color] duration-300 ease-in-out opacity-100">{item.label}</span>}
               </Link>
             );

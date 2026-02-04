@@ -14,9 +14,27 @@ import {
 
 export function ModeToggle() {
   const { setTheme } = useTheme()
+  const timeoutRef = React.useRef<number | null>(null)
 
   const applyTheme = (t: string) => {
-    setTheme(t)
+    const root = document.documentElement
+    root.classList.add("theme-transitioning")
+
+    if (timeoutRef.current) {
+      window.clearTimeout(timeoutRef.current)
+      timeoutRef.current = null
+    }
+
+    // Ensure the class is applied before the theme flips (prevents desync)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        setTheme(t)
+        timeoutRef.current = window.setTimeout(() => {
+          root.classList.remove("theme-transitioning")
+          timeoutRef.current = null
+        }, 170)
+      })
+    })
   };
 
   return (
