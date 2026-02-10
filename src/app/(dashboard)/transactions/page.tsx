@@ -33,8 +33,8 @@ export default function TransactionsPage() {
   const deleteTransaction = async (transaction: any) => {
     setIsDeleting(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to delete transactions", variant: "destructive" });
         return;
       }
@@ -46,7 +46,7 @@ export default function TransactionsPage() {
         .from("transactions")
         .delete()
         .eq("id", transaction.id)
-        .eq("user_id", session.user.id);
+        .eq("user_id", user.id);
 
       if (deleteError) {
         toast({ title: "Error", description: deleteError.message, variant: "destructive" });
@@ -97,15 +97,15 @@ export default function TransactionsPage() {
   const loadTransactions = async () => {
     setIsLoading(true);
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
     let userCurrency = "PHP";
-    if (session?.user?.id) {
+    if (user?.id) {
       const { data: pref } = await supabase
         .from("user_preferences")
         .select("currency")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .single();
       if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
       setCurrency(userCurrency);
@@ -115,7 +115,7 @@ export default function TransactionsPage() {
         .select(
           "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type), transfer_to_account:accounts!transfer_to_account_id(id,name,type)"
         )
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .order("date", { ascending: false })
         .limit(50);

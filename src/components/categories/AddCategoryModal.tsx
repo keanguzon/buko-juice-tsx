@@ -28,10 +28,10 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
 
     try {
       const {
-        data: { session },
-      } = await supabase.auth.getSession();
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (!session?.user?.id) {
+      if (!user?.id) {
         toast({
           title: "Not signed in",
           description: "You must be signed in to add categories",
@@ -43,7 +43,7 @@ export default function AddCategoryModal({ isOpen, onClose, onCreated }: AddCate
       const { error } = await (supabase as any)
         .from("categories")
         .insert({
-          user_id: session.user.id,
+          user_id: user.id,
           name: name.trim(),
           type,
           color: color,

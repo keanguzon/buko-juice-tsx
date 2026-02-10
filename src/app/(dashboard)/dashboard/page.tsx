@@ -27,13 +27,13 @@ export default function DashboardPage() {
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { user } } = await supabase.auth.getUser();
       let userCurrency = "PHP";
-      if (session?.user?.id) {
+      if (user?.id) {
         const { data: pref } = await supabase
           .from("user_preferences")
           .select("currency")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .single();
         if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
         setCurrency(userCurrency);
@@ -42,7 +42,7 @@ export default function DashboardPage() {
         const { data: accountsData } = await supabase
           .from("accounts")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
         setAccounts(accountsData ?? []);
 
@@ -52,7 +52,7 @@ export default function DashboardPage() {
           .select(
             "id, user_id, account_id, category_id, type, amount, description, date, transfer_to_account_id, created_at, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
           )
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .order("date", { ascending: false })
           .limit(3);
@@ -70,7 +70,7 @@ export default function DashboardPage() {
         const { data: monthTransactionsData } = await supabase
           .from("transactions")
           .select("type, amount, account_id, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .gte("date", startOfMonth);
 
         const monthTransactions = (monthTransactionsData ?? []) as any[];
@@ -113,15 +113,16 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const currentMoney = accounts
-    .filter((a: any) => a?.type !== "credit_card")
-    .reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  const networthAccounts = accounts.filter(
+    (a: any) => a?.type !== "credit_card" && a?.include_in_networth !== false
+  );
+  const currentMoney = networthAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
   const statCards = [
     {
       title: "Total Balance",
       value: formatCurrency(currentMoney, currency),
       icon: Wallet,
-      description: `Across ${(accounts || []).filter((a: any) => a?.type !== "credit_card").length || 0} accounts (excluding debt)`,
+      description: `Across ${networthAccounts.length || 0} accounts (excluding debt)`,
       color: "text-primary",
     },
     {
@@ -213,13 +214,12 @@ export default function DashboardPage() {
                   >
                     <div className="flex items-center space-x-4">
                       <div
-                        className={`p-2 rounded-full ${
-                          transaction.type === "income"
+                        className={`p-2 rounded-full ${transaction.type === "income"
                             ? "bg-green-500/10"
                             : transaction.type === "expense"
-                            ? "bg-red-500/10"
-                            : "bg-blue-500/10"
-                        }`}
+                              ? "bg-red-500/10"
+                              : "bg-blue-500/10"
+                          }`}
                       >
                         {transaction.type === "income" ? (
                           <ArrowDownLeft className="h-4 w-4 text-green-500" />
@@ -239,13 +239,12 @@ export default function DashboardPage() {
                       </div>
                     </div>
                     <span
-                      className={`text-sm font-medium ${
-                        transaction.type === "income"
+                      className={`text-sm font-medium ${transaction.type === "income"
                           ? "text-green-500"
                           : transaction.type === "expense"
-                          ? "text-red-500"
-                          : "text-blue-500"
-                      }`}
+                            ? "text-red-500"
+                            : "text-blue-500"
+                        }`}
                     >
                       {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
                       {formatCurrency(Number(transaction.amount), currency)}

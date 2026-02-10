@@ -90,15 +90,15 @@ export default function AccountsPage() {
     if (Math.abs(currentRate - nextRate) < 1e-9) return;
 
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
     const { error } = await sb
       .from("accounts")
       .update({ interest_rate: nextRate })
       .eq("id", accountId)
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Failed to update interest rate", error);
@@ -120,15 +120,15 @@ export default function AccountsPage() {
     const newValue = !currentAcc.include_in_networth;
 
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
     const { error } = await sb
       .from("accounts")
       .update({ include_in_networth: newValue })
       .eq("id", accountId)
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Failed to update include_in_networth", error);
@@ -142,15 +142,15 @@ export default function AccountsPage() {
 
   const deleteAccount = async (accountId: string) => {
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
     const { error } = await sb
       .from("accounts")
       .delete()
       .eq("id", accountId)
-      .eq("user_id", session.user.id);
+      .eq("user_id", user.id);
 
     if (error) {
       console.error("Failed to delete wallet", error);
@@ -174,14 +174,14 @@ export default function AccountsPage() {
   const loadAccounts = async () => {
     setIsLoading(true);
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (session?.user?.id) {
+    if (user?.id) {
       const { data: pref } = await supabase
         .from("user_preferences")
         .select("currency")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .single();
       if (pref && (pref as any).currency) setCurrency((pref as any).currency);
 
@@ -190,7 +190,7 @@ export default function AccountsPage() {
       const { data, error } = await supabase
         .from("accounts")
         .select("*")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .order("display_order", { ascending: true })
         .order("created_at", { ascending: false });
 
@@ -198,7 +198,7 @@ export default function AccountsPage() {
         const { data: fallbackData, error: fallbackErr } = await supabase
           .from("accounts")
           .select("*")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .order("created_at", { ascending: false });
 
         if (fallbackErr) {
@@ -231,7 +231,7 @@ export default function AccountsPage() {
             .select(
               "id, account_id, type, amount, description, date, transfer_to_account_id, category:categories(id,name,color), account:accounts!account_id(id,name,type)"
             )
-            .eq("user_id", session.user.id)
+            .eq("user_id", user.id)
             .or(
               `account_id.in.(${creditIds.join(",")}),transfer_to_account_id.in.(${creditIds.join(",")})`
             )
@@ -305,14 +305,14 @@ export default function AccountsPage() {
   };
 
   const saveAccountOrder = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
-    const updates = accounts.map((acc, idx) => 
+    const updates = accounts.map((acc, idx) =>
       sb.from("accounts")
         .update({ display_order: idx })
         .eq("id", acc.id)
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
     );
 
     await Promise.all(updates);
@@ -574,8 +574,8 @@ export default function AccountsPage() {
                         isEditingOrder
                           ? "cursor-move transition-all duration-200"
                           : account.type === "credit_card"
-                          ? "transition-all duration-200"
-                          : "cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                            ? "transition-all duration-200"
+                            : "cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
                       }
                     >
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

@@ -10,10 +10,10 @@ export default async function DashboardLayout({
   const supabase = createClient();
 
   const {
-    data: { session },
-  } = await supabase.auth.getSession();
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  if (!session) {
+  if (!user) {
     redirect("/login");
   }
 
@@ -21,16 +21,16 @@ export default async function DashboardLayout({
   const { data: profileData } = await supabase
     .from("users")
     .select("*")
-    .eq("id", session.user.id)
+    .eq("id", user.id)
     .single();
 
   const profile = (profileData ?? null) as any;
 
-  const user = {
-    email: session.user.email || "",
-    name: profile?.name || session.user.user_metadata?.name || session.user.user_metadata?.full_name,
-    avatar_url: profile?.avatar_url || session.user.user_metadata?.avatar_url,
+  const userInfo = {
+    email: user.email || "",
+    name: profile?.name || user.user_metadata?.name || user.user_metadata?.full_name,
+    avatar_url: profile?.avatar_url || user.user_metadata?.avatar_url,
   };
 
-  return <DashboardLayoutClient user={user}>{children}</DashboardLayoutClient>;
+  return <DashboardLayoutClient user={userInfo}>{children}</DashboardLayoutClient>;
 }

@@ -21,14 +21,14 @@ export default function ReportsPage() {
 
   const loadReports = async () => {
     setLoading(true);
-    const { data: { session } } = await supabase.auth.getSession();
+    const { data: { user } } = await supabase.auth.getUser();
 
     let userCurrency = "PHP";
-    if (session?.user?.id) {
+    if (user?.id) {
       const { data: pref } = await supabase
         .from("user_preferences")
         .select("currency")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .single();
       if (pref && (pref as any).currency) userCurrency = (pref as any).currency;
       setCurrency(userCurrency);
@@ -36,7 +36,7 @@ export default function ReportsPage() {
       const { data: accountsData } = await (supabase as any)
         .from("accounts")
         .select("id,name,type")
-        .eq("user_id", session.user.id);
+        .eq("user_id", user.id);
       setAccounts(accountsData || []);
 
       // Get last 30 days transactions
@@ -47,7 +47,7 @@ export default function ReportsPage() {
       const { data } = await (supabase as any)
         .from("transactions")
         .select("*, category:categories(*)")
-        .eq("user_id", session.user.id)
+        .eq("user_id", user.id)
         .gte("date", startDate);
 
       setTransactions(data || []);

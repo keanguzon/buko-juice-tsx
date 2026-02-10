@@ -39,10 +39,10 @@ export default function AddTransactionForm() {
 
   useEffect(() => {
     const load = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
 
-      const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
+      const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", user.id).order("name");
       const accountsList = (accountsData ?? []) as any[];
       setAccounts(accountsList);
 
@@ -72,8 +72,8 @@ export default function AddTransactionForm() {
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to add transactions", variant: "destructive" });
         return;
       }
@@ -105,7 +105,7 @@ export default function AddTransactionForm() {
         const { data: monthTx, error: monthTxErr } = await sb
           .from("transactions")
           .select("account_id, type, amount, date, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .gte("date", start)
           .lt("date", end)
           .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`);
@@ -152,14 +152,14 @@ export default function AddTransactionForm() {
       if (type === "expense" && isPayLater && installments > 1) {
         const installmentAmount = amt / installments;
         const transactions = [];
-        
+
         for (let i = 0; i < installments; i++) {
           const installmentDate = new Date(startMonth + "-01");
           installmentDate.setMonth(installmentDate.getMonth() + i);
           const dateStr = installmentDate.toISOString().slice(0, 10);
-          
+
           transactions.push({
-            user_id: session.user.id,
+            user_id: user.id,
             account_id: effectiveAccountId,
             category_id: categoryId || null,
             type,
@@ -169,13 +169,13 @@ export default function AddTransactionForm() {
             transfer_to_account_id: null,
           });
         }
-        
+
         const { error } = await sb.from("transactions").insert(transactions);
         if (error) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
           return;
         }
-        
+
         // Update debt account balance (sum of all installments)
         const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
         const current = Number(acc?.balance || 0);
@@ -186,8 +186,8 @@ export default function AddTransactionForm() {
         const transactionDate = isDebtPayment
           ? `${debtPaymentMonth}-01`
           : (type === "expense" && isPayLater)
-          ? new Date(startMonth + "-01").toISOString().slice(0, 10)
-          : date;
+            ? new Date(startMonth + "-01").toISOString().slice(0, 10)
+            : date;
         const finalDescription = (() => {
           const trimmed = (description || "").trim();
           if (trimmed) return trimmed;
@@ -202,7 +202,7 @@ export default function AddTransactionForm() {
           return `Debt - ${label}`;
         })();
         const { error, data: inserted } = await sb.from("transactions").insert({
-          user_id: session.user.id,
+          user_id: user.id,
           account_id: effectiveAccountId,
           category_id: categoryId || null,
           type,
@@ -265,11 +265,11 @@ export default function AddTransactionForm() {
         }
       }
 
-      toast({ 
-        title: "Transaction added", 
-        description: isPayLater && installments > 1 
-          ? `Created ${installments} installments successfully.` 
-          : "Your transaction was saved." 
+      toast({
+        title: "Transaction added",
+        description: isPayLater && installments > 1
+          ? `Created ${installments} installments successfully.`
+          : "Your transaction was saved."
       });
       router.push("/transactions");
       router.refresh();
@@ -355,8 +355,8 @@ export default function AddTransactionForm() {
             else setAccountId(e.target.value);
           }}
         >
-          {(type === "expense" && isPayLater 
-            ? accounts.filter((a: any) => a?.type === "credit_card") 
+          {(type === "expense" && isPayLater
+            ? accounts.filter((a: any) => a?.type === "credit_card")
             : accounts.filter((a: any) => a?.type !== "credit_card")
           ).map((a: any) => (
             <option value={a.id} key={a.id}>{a.name} ({a.currency})</option>

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useToast } from "@/components/ui/use-toast";
-import { User, Upload, Loader2, DollarSign, Shield } from "lucide-react";
+import { User, Upload, Loader2, DollarSign, Shield, Eye, EyeOff } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 
 export default function SettingsPage() {
@@ -18,7 +18,7 @@ export default function SettingsPage() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingCurrency, setSavingCurrency] = useState(false);
   const [uploading, setUploading] = useState(false);
-  
+
   const [profile, setProfile] = useState<any>(null);
   const [name, setName] = useState("");
   const [username, setUsername] = useState("");
@@ -34,11 +34,15 @@ export default function SettingsPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [passwordMode, setPasswordMode] = useState<"password" | "oauth">("password");
   const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   // Currency state
   const [currency, setCurrency] = useState("PHP");
@@ -55,8 +59,8 @@ export default function SettingsPage() {
       const providers = Array.isArray(providersFromAppMeta)
         ? providersFromAppMeta
         : provider
-        ? [provider]
-        : [];
+          ? [provider]
+          : [];
 
       const identityProviders = (user as any)?.identities?.map((i: any) => i?.provider).filter(Boolean) ?? [];
       const allProviders = Array.from(new Set([...(providers as string[]), ...identityProviders]));
@@ -461,7 +465,7 @@ export default function SettingsPage() {
       if (updateError) throw updateError;
 
       setAvatarUrl(publicUrl);
-      
+
       toast({
         title: "Success!",
         description: "Profile picture updated successfully",
@@ -703,19 +707,19 @@ export default function SettingsPage() {
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
-              <Label htmlFor="currency">Default Currency</Label>
-              <select
-                id="currency"
-                className="w-full px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
-                value={currency}
-                onChange={e => setCurrency(e.target.value)}
-              >
-                <option value="PHP">PHP - Philippine Peso</option>
-                <option value="USD">USD - US Dollar</option>
-                <option value="EUR">EUR - Euro</option>
-                <option value="GBP">GBP - British Pound</option>
-                <option value="JPY">JPY - Japanese Yen</option>
-              </select>
+                <Label htmlFor="currency">Default Currency</Label>
+                <select
+                  id="currency"
+                  className="w-full px-3 py-2 border rounded-lg dark:bg-slate-900 dark:border-slate-700"
+                  value={currency}
+                  onChange={e => setCurrency(e.target.value)}
+                >
+                  <option value="PHP">PHP - Philippine Peso</option>
+                  <option value="USD">USD - US Dollar</option>
+                  <option value="EUR">EUR - Euro</option>
+                  <option value="GBP">GBP - British Pound</option>
+                  <option value="JPY">JPY - Japanese Yen</option>
+                </select>
               </div>
 
               <Button onClick={handleSaveCurrency} disabled={savingCurrency}>
@@ -737,15 +741,15 @@ export default function SettingsPage() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-col sm:flex-row gap-3">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 className="w-full sm:w-auto"
                 onClick={openPasswordModal}
               >
                 Change Password
               </Button>
-              <Button 
-                variant="destructive" 
+              <Button
+                variant="destructive"
                 className="w-full sm:w-auto"
                 onClick={() => setShowDeleteModal(true)}
               >
@@ -777,33 +781,78 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <Label htmlFor="currentPassword">Current Password</Label>
-                    <Input
-                      id="currentPassword"
-                      type="password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      placeholder="Enter current password"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="currentPassword"
+                        type={showCurrentPassword ? "text" : "password"}
+                        value={currentPassword}
+                        onChange={(e) => setCurrentPassword(e.target.value)}
+                        placeholder="Enter current password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showCurrentPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="newPassword">New Password</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      placeholder="Enter new password"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="newPassword"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      placeholder="Confirm new password"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm new password"
+                        className="pr-10"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? (
+                          <EyeOff className="h-4 w-4" />
+                        ) : (
+                          <Eye className="h-4 w-4" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -813,30 +862,30 @@ export default function SettingsPage() {
                   </p>
                 </div>
               )}
-            <div className="flex gap-3 mt-6">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => {
-                  setShowPasswordModal(false);
-                  setCurrentPassword("");
-                  setNewPassword("");
-                  setConfirmPassword("");
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="flex-1"
-                onClick={handleChangePassword}
-                disabled={changingPassword || sendingPasswordLink}
-              >
-                {(changingPassword || sendingPasswordLink) && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
-                {passwordMode === "password" ? "Change Password" : "Send Link"}
-              </Button>
-            </div>
+              <div className="flex gap-3 mt-6">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => {
+                    setShowPasswordModal(false);
+                    setCurrentPassword("");
+                    setNewPassword("");
+                    setConfirmPassword("");
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  className="flex-1"
+                  onClick={handleChangePassword}
+                  disabled={changingPassword || sendingPasswordLink}
+                >
+                  {(changingPassword || sendingPasswordLink) && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  {passwordMode === "password" ? "Change Password" : "Send Link"}
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -855,36 +904,51 @@ export default function SettingsPage() {
             <div className="p-6">
               <h3 className="text-xl font-semibold mb-4 text-red-500">Delete Account</h3>
               <p className="text-muted-foreground mb-6">
-              Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
-            </p>
-            <div className="space-y-2 mb-6">
-              <Label htmlFor="deletePassword">Password</Label>
-              <Input
-                id="deletePassword"
-                type="password"
-                value={deletePassword}
-                onChange={(e) => setDeletePassword(e.target.value)}
-                placeholder="Enter your password"
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="outline"
-                className="flex-1"
-                onClick={() => setShowDeleteModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="destructive"
-                className="flex-1"
-                onClick={handleDeleteAccount}
-                disabled={deletingAccount}
-              >
-                {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Delete
-              </Button>
-            </div>
+                Are you sure you want to permanently delete your account? This action cannot be undone. All your data will be lost.
+              </p>
+              <div className="space-y-2 mb-6">
+                <Label htmlFor="deletePassword">Password</Label>
+                <div className="relative">
+                  <Input
+                    id="deletePassword"
+                    type={showDeletePassword ? "text" : "password"}
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder="Enter your password"
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowDeletePassword(!showDeletePassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    tabIndex={-1}
+                  >
+                    {showDeletePassword ? (
+                      <EyeOff className="h-4 w-4" />
+                    ) : (
+                      <Eye className="h-4 w-4" />
+                    )}
+                  </button>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setShowDeleteModal(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={handleDeleteAccount}
+                  disabled={deletingAccount}
+                >
+                  {deletingAccount && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Delete
+                </Button>
+              </div>
             </div>
           </div>
         </div>

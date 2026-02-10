@@ -69,17 +69,17 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
   }, [type]);
 
   const loadData = async (preferredAccountId?: string) => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user?.id) return;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user?.id) return;
 
     const { data: pref } = await supabase
       .from("user_preferences")
       .select("currency")
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .single();
     if (pref && (pref as any).currency) setCurrency((pref as any).currency);
 
-    const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", session.user.id).order("name");
+    const { data: accountsData } = await sb.from("accounts").select("*").eq("user_id", user.id).order("name");
     const accountsList = (accountsData ?? []) as any[];
     setAccounts(accountsList);
 
@@ -135,8 +135,8 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         return;
       }
 
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) return;
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) return;
 
       setIsDebtMonthLoading(true);
       try {
@@ -144,7 +144,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         const { data: txData, error: txErr } = await sb
           .from("transactions")
           .select("id, account_id, type, amount, date, transfer_to_account_id")
-          .eq("user_id", session.user.id)
+          .eq("user_id", user.id)
           .or(`account_id.eq.${creditId},transfer_to_account_id.eq.${creditId}`)
           .order("date", { ascending: false })
           .limit(5000);
@@ -207,8 +207,8 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session?.user?.id) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user?.id) {
         toast({ title: "Not signed in", description: "You must be signed in to add transactions", variant: "destructive" });
         return;
       }
@@ -351,14 +351,14 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       if (type === "expense" && isPayLater && installments > 1) {
         const installmentAmount = amt / installments;
         const transactions = [];
-        
+
         for (let i = 0; i < installments; i++) {
           const installmentDate = new Date(startMonth + "-01");
           installmentDate.setMonth(installmentDate.getMonth() + i);
           const dateStr = installmentDate.toISOString().slice(0, 10);
-          
+
           transactions.push({
-            user_id: session.user.id,
+            user_id: user.id,
             account_id: effectiveAccountId,
             category_id: categoryId || null,
             type,
@@ -368,13 +368,13 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
             transfer_to_account_id: null,
           });
         }
-        
+
         const { error } = await sb.from("transactions").insert(transactions);
         if (error) {
           toast({ title: "Error", description: error.message, variant: "destructive" });
           return;
         }
-        
+
         // Update debt account balance (sum of all installments)
         const { data: acc } = await sb.from("accounts").select("balance").eq("id", effectiveAccountId).single();
         const current = Number(acc?.balance || 0);
@@ -385,8 +385,8 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         const transactionDate = isDebtPayment
           ? `${debtPaymentMonth}-01`
           : (type === "expense" && isPayLater)
-          ? new Date(startMonth + "-01").toISOString().slice(0, 10)
-          : date;
+            ? new Date(startMonth + "-01").toISOString().slice(0, 10)
+            : date;
         const finalDescription = (() => {
           const trimmed = (description || "").trim();
           if (trimmed) return trimmed;
@@ -395,7 +395,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
           return `Debt - ${label}`;
         })();
         const { error } = await sb.from("transactions").insert({
-          user_id: session.user.id,
+          user_id: user.id,
           account_id: effectiveAccountId,
           category_id: type === "transfer" ? null : (categoryId || null),
           type,
@@ -449,13 +449,13 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
         }
       }
 
-      toast({ 
-        title: "Transaction added", 
-        description: isPayLater && installments > 1 
-          ? `Created ${installments} installments successfully.` 
-          : "Your transaction was saved." 
+      toast({
+        title: "Transaction added",
+        description: isPayLater && installments > 1
+          ? `Created ${installments} installments successfully.`
+          : "Your transaction was saved."
       });
-      
+
       // Reset form
       setAmount("");
       setDescription("");
@@ -463,7 +463,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
       setIsPayLater(false);
       setInstallments(1);
       setStartMonth(new Date().toISOString().slice(0, 7));
-      
+
       // Small delay to ensure DB has updated before closing
       setTimeout(() => {
         onClose();
@@ -479,7 +479,7 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200" onClick={onClose}>
-      <div 
+      <div
         className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300"
         onClick={(e) => e.stopPropagation()}
       >
@@ -503,11 +503,10 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
                 <button
                   type="button"
                   onClick={() => setType("expense")}
-                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${
-                    type === "expense"
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${type === "expense"
                       ? "border-red-500 bg-red-50 dark:bg-red-950/20"
                       : "border-gray-200 dark:border-slate-700 hover:border-red-300"
-                  }`}
+                    }`}
                 >
                   <ArrowUpRight className={`h-6 w-6 mb-2 ${type === "expense" ? "text-red-500" : "text-gray-400"}`} />
                   <span className={`text-sm font-medium ${type === "expense" ? "text-red-500" : ""}`}>Expense</span>
@@ -515,11 +514,10 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
                 <button
                   type="button"
                   onClick={() => setType("income")}
-                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${
-                    type === "income"
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${type === "income"
                       ? "border-green-500 bg-green-50 dark:bg-green-950/20"
                       : "border-gray-200 dark:border-slate-700 hover:border-green-300"
-                  }`}
+                    }`}
                 >
                   <ArrowDownLeft className={`h-6 w-6 mb-2 ${type === "income" ? "text-green-500" : "text-gray-400"}`} />
                   <span className={`text-sm font-medium ${type === "income" ? "text-green-500" : ""}`}>Income</span>
@@ -527,11 +525,10 @@ export default function AddTransactionModal({ isOpen, onClose, defaultAccountId 
                 <button
                   type="button"
                   onClick={() => setType("transfer")}
-                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${
-                    type === "transfer"
+                  className={`flex flex-col items-center justify-center p-4 border-2 rounded-xl transition-all duration-200 ${type === "transfer"
                       ? "border-blue-500 bg-blue-50 dark:bg-blue-950/20"
                       : "border-gray-200 dark:border-slate-700 hover:border-blue-300"
-                  }`}
+                    }`}
                 >
                   <ArrowLeftRight className={`h-6 w-6 mb-2 ${type === "transfer" ? "text-blue-500" : "text-gray-400"}`} />
                   <span className={`text-sm font-medium ${type === "transfer" ? "text-blue-500" : ""}`}>Transfer</span>

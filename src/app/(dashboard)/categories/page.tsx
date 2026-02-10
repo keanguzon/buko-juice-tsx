@@ -29,10 +29,10 @@ export default function CategoriesPage() {
   const loadCategories = async () => {
     setIsLoading(true);
     const {
-      data: { session },
-    } = await supabase.auth.getSession();
+      data: { user },
+    } = await supabase.auth.getUser();
 
-    if (!session?.user?.id) {
+    if (!user?.id) {
       setCategories([]);
       setIsLoading(false);
       return;
@@ -41,7 +41,7 @@ export default function CategoriesPage() {
     const { data } = await sb
       .from("categories")
       .select("*")
-      .or(`user_id.eq.${session.user.id},is_default.eq.true`)
+      .or(`user_id.eq.${user.id},is_default.eq.true`)
       .order("name");
 
     setCategories((data ?? []) as Category[]);
