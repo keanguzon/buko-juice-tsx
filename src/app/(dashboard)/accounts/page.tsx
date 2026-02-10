@@ -18,6 +18,7 @@ import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import { useToast } from "@/components/ui/use-toast";
+import { CardSkeleton } from "@/components/ui/skeleton";
 
 const accountTypeIcons = {
   cash: Wallet,
@@ -570,12 +571,13 @@ export default function AccountsPage() {
                           setIsAddTransactionOpen(true);
                         }
                       }}
+                      style={{ animationDelay: `${index * 50}ms` }}
                       className={
                         isEditingOrder
-                          ? "cursor-move transition-all duration-200"
+                          ? "cursor-move transition-all duration-200 card-lift"
                           : account.type === "credit_card"
-                            ? "transition-all duration-200"
-                            : "cursor-pointer hover:shadow-lg transition-all duration-300 hover:-translate-y-1"
+                            ? "transition-all duration-200 card-lift"
+                            : "cursor-pointer card-lift"
                       }
                     >
                       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -700,8 +702,10 @@ export default function AccountsPage() {
                 </Button>
               </div>
             ) : (
-              <div className="flex items-center justify-center py-4">
-                <div className="inline-block h-6 w-6 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500"></div>
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <CardSkeleton />
+                <CardSkeleton />
+                <CardSkeleton />
               </div>
             )}
           </CardContent>

@@ -10,6 +10,7 @@ import Tooltip from "@/components/ui/tooltip";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import TransactionDetailModal from "@/components/transactions/TransactionDetailModal";
 import { useToast } from "@/components/ui/use-toast";
+import { TableSkeleton } from "@/components/ui/skeleton";
 
 
 export default function TransactionsPage() {
@@ -197,7 +198,7 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-      <Card className="card-nohover">
+      <Card>
         <CardHeader>
           <CardTitle>Transactions</CardTitle>
           <CardDescription>Your complete transaction history</CardDescription>
@@ -211,7 +212,8 @@ export default function TransactionsPage() {
               {filteredTransactions.map((transaction, index) => (
                 <div
                   key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border gap-3 transition-transform duration-200 hover:scale-[1.02] hover:shadow-md"
+                  className="flex items-center justify-between p-4 rounded-lg border gap-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-md data-transition"
+                  style={{ animationDelay: `${index * 30}ms` }}
                 >
                   <div 
                     onClick={() => setSelectedTransaction(transaction)}
@@ -300,9 +302,7 @@ export default function TransactionsPage() {
               </Button>
             </div>
           ) : (
-            <div className="flex items-center justify-center py-12">
-              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500 motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-            </div>
+            <TableSkeleton rows={8} />
           )}
         </CardContent>
       </Card>

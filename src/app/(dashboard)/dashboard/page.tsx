@@ -13,6 +13,8 @@ import {
   ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
+import { StatCardSkeleton } from "@/components/ui/skeleton";
+import { CountUpNumber } from "@/components/ui/count-up";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -150,8 +152,19 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-green-500"></div>
+      <div className="space-y-6 animate-in fade-in duration-500">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Your financial overview at a glance.
+          </p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
       </div>
     );
   }
@@ -167,14 +180,20 @@ export default function DashboardPage() {
 
       {/* Stats Grid */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat) => (
-          <Card key={stat.title}>
+        {statCards.map((stat, index) => (
+          <Card 
+            key={stat.title} 
+            className="card-lift"
+            style={{ animationDelay: `${index * 100}ms` }}
+          >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
               <stat.icon className={`h-4 w-4 ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${stat.color}`}>{stat.value}</div>
+              <div className={`text-2xl font-bold data-transition ${stat.color}`}>
+                {stat.value}
+              </div>
               <p className="text-xs text-muted-foreground">{stat.description}</p>
             </CardContent>
           </Card>
@@ -207,14 +226,15 @@ export default function DashboardPage() {
           <CardContent>
             {transactions && transactions.length > 0 ? (
               <div className="space-y-4">
-                {transactions.map((transaction) => (
+                {transactions.map((transaction, index) => (
                   <div
                     key={transaction.id}
-                    className="flex items-center justify-between hover:bg-secondary/50 p-2 rounded-lg transition-colors"
+                    className="flex items-center justify-between hover:bg-secondary/50 p-2 rounded-lg transition-all duration-200 hover:scale-[1.01] cursor-pointer data-transition"
+                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-center space-x-4">
                       <div
-                        className={`p-2 rounded-full ${transaction.type === "income"
+                        className={`p-2 rounded-full transition-transform hover:scale-110 ${transaction.type === "income"
                             ? "bg-green-500/10"
                             : transaction.type === "expense"
                               ? "bg-red-500/10"

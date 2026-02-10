@@ -87,8 +87,14 @@ function LoginPageInner() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4 animate-fadeIn">
-      <Card className="w-full max-w-md animate-fadeIn">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4 animate-fadeIn relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="landing-bg-animation">
+        <div className="landing-bg-blob landing-bg-blob-1" />
+        <div className="landing-bg-blob landing-bg-blob-2" />
+      </div>
+
+      <Card className="w-full max-w-md animate-fadeIn landing-card-glow relative z-10">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center space-x-2 hover:scale-105 transition-transform duration-200">
@@ -151,7 +157,7 @@ function LoginPageInner() {
                 </button>
               </div>
             </div>
-            <Button type="submit" className="w-full transition-colors" disabled={isLoading}>
+            <Button type="submit" className="w-full landing-btn-glow" disabled={isLoading}>
               {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Sign In
             </Button>

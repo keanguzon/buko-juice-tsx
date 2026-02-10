@@ -13,8 +13,14 @@ function VerifyEmailInner() {
   const email = searchParams.get("email") || "";
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20 p-4 relative overflow-hidden">
+      {/* Animated Background */}
+      <div className="landing-bg-animation">
+        <div className="landing-bg-blob landing-bg-blob-1" />
+        <div className="landing-bg-blob landing-bg-blob-2" />
+      </div>
+
+      <Card className="w-full max-w-md landing-card-glow relative z-10">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
             <Link href="/" className="flex items-center space-x-2">
