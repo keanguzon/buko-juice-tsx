@@ -14,11 +14,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, GripVertical, Edit2, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Wallet, CreditCard, Landmark, Smartphone, TrendingUp, GripVertical, Edit2, Trash2, LayoutGrid, List } from "lucide-react";
 import AddAccountModal from "@/components/accounts/AddAccountModal";
 import AddTransactionModal from "@/components/transactions/AddTransactionModal";
 import { useToast } from "@/components/ui/use-toast";
 import { CardSkeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 
 const accountTypeIcons = {
   cash: Wallet,
@@ -55,6 +56,7 @@ export default function AccountsPage() {
   const [isEditingOrder, setIsEditingOrder] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [accountToDelete, setAccountToDelete] = useState<string | null>(null);
+  const [walletView, setWalletView] = useState<"tiles" | "details">("tiles");
   const { toast } = useToast();
 
   const normalizeLogoFilename = (filename: string) => {
@@ -429,7 +431,7 @@ export default function AccountsPage() {
                     Debt selected ({selectedMonthsDetailLabel})
                   </p>
                   <p className="font-semibold text-red-500">
-                    {isDebtLoading ? "Loading..." : formatCurrency(selectedDebt, currency)}
+                    {isDebtLoading ? "Loading..." : `-${formatCurrency(Math.abs(selectedDebt), currency)}`}
                   </p>
                 </div>
 
@@ -520,175 +522,353 @@ export default function AccountsPage() {
                 <CardTitle>Wallets</CardTitle>
                 <CardDescription>Your financial wallets and accounts</CardDescription>
               </div>
-              {!isEditingOrder ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setIsEditingOrder(true)}
-                  disabled={!(accounts && accounts.length > 1)}
-                  title={accounts && accounts.length > 1 ? "Reorder your accounts" : "Add at least two accounts to reorder"}
-                >
-                  <Edit2 className="h-4 w-4 mr-2" />
-                  Edit Order
-                </Button>
-              ) : (
-                <div className="flex gap-2">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 rounded-lg border border-input bg-background p-1">
+                  <button
+                    type="button"
+                    onClick={() => setWalletView("details")}
+                    className={`h-8 w-8 rounded-md transition-all duration-200 ${walletView === "details"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent"
+                      }`}
+                    aria-label="Details view"
+                  >
+                    <List className="h-4 w-4 mx-auto" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setWalletView("tiles")}
+                    className={`h-8 w-8 rounded-md transition-all duration-200 ${walletView === "tiles"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-accent"
+                      }`}
+                    aria-label="Tiles view"
+                  >
+                    <LayoutGrid className="h-4 w-4 mx-auto" />
+                  </button>
+                </div>
+                {!isEditingOrder ? (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => {
-                      setIsEditingOrder(false);
-                      loadAccounts();
-                    }}
+                    onClick={() => setIsEditingOrder(true)}
+                    disabled={!(accounts && accounts.length > 1)}
+                    title={accounts && accounts.length > 1 ? "Reorder your accounts" : "Add at least two accounts to reorder"}
                   >
-                    Cancel
+                    <Edit2 className="h-4 w-4 mr-2" />
+                    Edit Order
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={saveAccountOrder}
-                  >
-                    Save Order
-                  </Button>
-                </div>
-              )}
+                ) : (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setIsEditingOrder(false);
+                        loadAccounts();
+                      }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={saveAccountOrder}
+                    >
+                      Save Order
+                    </Button>
+                  </div>
+                )}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
             {!isLoading && accounts && accounts.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {accounts.map((account, index) => {
-                  const Icon = accountTypeIcons[account.type as keyof typeof accountTypeIcons] || Wallet;
-                  return (
-                    <Card
-                      key={account.id}
-                      draggable={isEditingOrder}
-                      onDragStart={() => handleDragStart(index)}
-                      onDragOver={(e) => handleDragOver(e, index)}
-                      onDragEnd={handleDragEnd}
-                      onClick={() => {
-                        if (!isEditingOrder && account.type !== "credit_card") {
-                          setDefaultTransactionAccountId(account.id);
-                          setIsAddTransactionOpen(true);
-                        }
-                      }}
-                      style={{ animationDelay: `${index * 50}ms` }}
-                      className={
-                        isEditingOrder
-                          ? "cursor-move transition-all duration-200 card-lift"
-                          : account.type === "credit_card"
-                            ? "transition-all duration-200 card-lift"
-                            : "cursor-pointer card-lift"
-                      }
-                    >
-                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium truncate pr-2">
-                          {account.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2">
-                          {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setAccountToDelete(account.id);
-                              }}
-                              className="p-1 rounded hover:bg-destructive/10 transition-colors"
-                              title="Delete wallet"
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </button>
-                          )}
-                          <div
-                            className="p-2 rounded-full transition-all duration-200 hover:scale-110"
-                            style={{ backgroundColor: `${account.color}20` }}
-                          >
-                            {account.icon ? (
-                              <img
-                                src={`/logos/${normalizeLogoFilename(account.icon)}`}
-                                alt={account.name}
-                                className="h-5 w-5"
-                              />
-                            ) : (
-                              <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
-                            )}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="text-2xl font-bold">
-                          {formatCurrency(Number(account.balance), currency)}
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
-                        </p>
-                        {account?.type !== "credit_card" && (
-                          <div
-                            className="mt-2 flex items-center gap-2"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <input
-                              type="checkbox"
-                              id={`networth-${account.id}`}
-                              checked={account.include_in_networth !== false}
-                              onChange={() => toggleIncludeInNetworth(account.id)}
-                              className="h-4 w-4 cursor-pointer"
-                            />
-                            <label
-                              htmlFor={`networth-${account.id}`}
-                              className="text-xs text-muted-foreground cursor-pointer select-none"
-                            >
-                              Include in Net Worth
-                            </label>
-                          </div>
-                        )}
-                        {account?.is_savings ? (
-                          <div
-                            className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <span>Interest:</span>
-                            <Input
-                              inputMode="decimal"
-                              type="number"
-                              step="0.01"
-                              min={0}
-                              className="h-7 w-20 px-2 text-xs"
-                              value={interestRateDraft[account.id] ?? String(Number(account?.interest_rate || 0))}
-                              onChange={(e) =>
-                                setInterestRateDraft((prev) => ({
-                                  ...prev,
-                                  [account.id]: e.target.value,
-                                }))
-                              }
-                              onBlur={() => saveInterestRate(account.id)}
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  (e.currentTarget as HTMLInputElement).blur();
-                                }
-                              }}
-                              aria-label="Interest rate percent per year"
-                            />
-                            <span>%/yr</span>
-                          </div>
-                        ) : null}
-                        {account?.type === "credit_card" && Number(account.balance) > 0 ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="mt-2 w-full text-xs hover:bg-primary hover:text-primary-foreground"
-                            onClick={(e) => {
-                              e.stopPropagation();
+              <AnimatePresence mode="wait">
+                {walletView === "tiles" ? (
+                  <motion.div
+                    key="tiles"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+                  >
+                    {accounts.map((account, index) => {
+                      const Icon = accountTypeIcons[account.type as keyof typeof accountTypeIcons] || Wallet;
+                      return (
+                        <Card
+                          key={account.id}
+                          draggable={isEditingOrder}
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => {
+                            if (!isEditingOrder && account.type !== "credit_card") {
                               setDefaultTransactionAccountId(account.id);
                               setIsAddTransactionOpen(true);
-                            }}
-                          >
-                            Pay Debt
-                          </Button>
-                        ) : null}
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </div>
+                            }
+                          }}
+                          className={
+                            isEditingOrder
+                              ? "cursor-move transition-all duration-200 card-lift"
+                              : account.type === "credit_card"
+                                ? "transition-all duration-200 card-lift"
+                                : "cursor-pointer card-lift"
+                          }
+                        >
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                            <CardTitle className="text-sm font-medium truncate pr-2">
+                              {account.name}
+                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setAccountToDelete(account.id);
+                                  }}
+                                  className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                                  title="Delete wallet"
+                                >
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </button>
+                              )}
+                              <div
+                                className="p-2 rounded-full transition-all duration-200 hover:scale-110"
+                                style={{ backgroundColor: `${account.color}20` }}
+                              >
+                                {account.icon ? (
+                                  <img
+                                    src={`/logos/${normalizeLogoFilename(account.icon)}`}
+                                    alt={account.name}
+                                    className="h-5 w-5"
+                                  />
+                                ) : (
+                                  <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
+                                )}
+                              </div>
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="text-2xl font-bold">
+                              {account.type === "credit_card" ? "-" : ""}{formatCurrency(Math.abs(Number(account.balance)), currency)}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
+                            </p>
+                            {account?.type !== "credit_card" && (
+                              <div
+                                className="mt-2 flex items-center gap-2"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  id={`networth-${account.id}`}
+                                  checked={account.include_in_networth !== false}
+                                  onChange={() => toggleIncludeInNetworth(account.id)}
+                                  className="h-4 w-4 cursor-pointer"
+                                />
+                                <label
+                                  htmlFor={`networth-${account.id}`}
+                                  className="text-xs text-muted-foreground cursor-pointer select-none"
+                                >
+                                  Include in Net Worth
+                                </label>
+                              </div>
+                            )}
+                            {account?.is_savings ? (
+                              <div
+                                className="mt-1 flex items-center gap-2 text-xs text-muted-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <span>Interest:</span>
+                                <Input
+                                  inputMode="decimal"
+                                  type="number"
+                                  step="0.01"
+                                  min={0}
+                                  className="h-7 w-20 px-2 text-xs"
+                                  value={interestRateDraft[account.id] ?? String(Number(account?.interest_rate || 0))}
+                                  onChange={(e) =>
+                                    setInterestRateDraft((prev) => ({
+                                      ...prev,
+                                      [account.id]: e.target.value,
+                                    }))
+                                  }
+                                  onBlur={() => saveInterestRate(account.id)}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter") {
+                                      (e.currentTarget as HTMLInputElement).blur();
+                                    }
+                                  }}
+                                  aria-label="Interest rate percent per year"
+                                />
+                                <span>%/yr</span>
+                              </div>
+                            ) : null}
+                            {account?.type === "credit_card" && Number(account.balance) > 0 ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="mt-2 w-full text-xs hover:bg-primary hover:text-primary-foreground"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDefaultTransactionAccountId(account.id);
+                                  setIsAddTransactionOpen(true);
+                                }}
+                              >
+                                Pay Debt
+                              </Button>
+                            ) : null}
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="list"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2 }}
+                    className="space-y-3"
+                  >
+                    {accounts.map((account, index) => {
+                      const Icon = accountTypeIcons[account.type as keyof typeof accountTypeIcons] || Wallet;
+                      return (
+                        <Card
+                          key={account.id}
+                          draggable={isEditingOrder}
+                          onDragStart={() => handleDragStart(index)}
+                          onDragOver={(e) => handleDragOver(e, index)}
+                          onDragEnd={handleDragEnd}
+                          onClick={() => {
+                            if (!isEditingOrder && account.type !== "credit_card") {
+                              setDefaultTransactionAccountId(account.id);
+                              setIsAddTransactionOpen(true);
+                            }
+                          }}
+                          className={
+                            isEditingOrder
+                              ? "cursor-move transition-all duration-200"
+                              : account.type === "credit_card"
+                                ? "transition-all duration-200"
+                                : "cursor-pointer"
+                          }
+                        >
+                          <CardContent className="p-4 space-y-3">
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div
+                                  className="p-2 rounded-full"
+                                  style={{ backgroundColor: `${account.color}20` }}
+                                >
+                                  {account.icon ? (
+                                    <img
+                                      src={`/logos/${normalizeLogoFilename(account.icon)}`}
+                                      alt={account.name}
+                                      className="h-5 w-5"
+                                    />
+                                  ) : (
+                                    <Icon className="h-4 w-4" style={{ color: account.color || "#22c55e" }} />
+                                  )}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="font-semibold truncate">{account.name}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {accountTypeLabels[account.type as keyof typeof accountTypeLabels]}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {isEditingOrder ? <GripVertical className="h-5 w-5 text-muted-foreground" /> : (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setAccountToDelete(account.id);
+                                    }}
+                                    className="p-1 rounded hover:bg-destructive/10 transition-colors"
+                                    title="Delete wallet"
+                                  >
+                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                  </button>
+                                )}
+                                <div className="text-right">
+                                  <p className="text-lg font-bold">
+                                    {account.type === "credit_card" ? "-" : ""}{formatCurrency(Math.abs(Number(account.balance)), currency)}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">Balance</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                              {account?.type !== "credit_card" && (
+                                <div className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    id={`networth-row-${account.id}`}
+                                    checked={account.include_in_networth !== false}
+                                    onChange={() => toggleIncludeInNetworth(account.id)}
+                                    className="h-4 w-4 cursor-pointer"
+                                  />
+                                  <label
+                                    htmlFor={`networth-row-${account.id}`}
+                                    className="text-xs text-muted-foreground cursor-pointer select-none"
+                                  >
+                                    Include in Net Worth
+                                  </label>
+                                </div>
+                              )}
+                              {account?.is_savings ? (
+                                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                  <span>Interest:</span>
+                                  <Input
+                                    inputMode="decimal"
+                                    type="number"
+                                    step="0.01"
+                                    min={0}
+                                    className="h-7 w-20 px-2 text-xs"
+                                    value={interestRateDraft[account.id] ?? String(Number(account?.interest_rate || 0))}
+                                    onChange={(e) =>
+                                      setInterestRateDraft((prev) => ({
+                                        ...prev,
+                                        [account.id]: e.target.value,
+                                      }))
+                                    }
+                                    onBlur={() => saveInterestRate(account.id)}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        (e.currentTarget as HTMLInputElement).blur();
+                                      }
+                                    }}
+                                    aria-label="Interest rate percent per year"
+                                  />
+                                  <span>%/yr</span>
+                                </div>
+                              ) : null}
+                              {account?.type === "credit_card" && Number(account.balance) > 0 ? (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="text-xs hover:bg-primary hover:text-primary-foreground"
+                                  onClick={() => {
+                                    setDefaultTransactionAccountId(account.id);
+                                    setIsAddTransactionOpen(true);
+                                  }}
+                                >
+                                  Pay Debt
+                                </Button>
+                              ) : null}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </motion.div>
+                )}
+              </AnimatePresence>
             ) : !isLoading ? (
               <div className="flex flex-col items-center justify-center py-8 text-center">
                 <Wallet className="h-12 w-12 text-muted-foreground/50 mb-4 animate-pulse" />
@@ -735,7 +915,7 @@ export default function AccountsPage() {
                     <div key={m} className="rounded-lg border p-4">
                       <div className="flex items-center justify-between">
                         <p className="font-medium">{m}</p>
-                        <p className="font-semibold text-red-500">{formatCurrency(monthDebt, currency)}</p>
+                        <p className="font-semibold text-red-500">-{formatCurrency(Math.abs(monthDebt), currency)}</p>
                       </div>
 
                       {purchases.length > 0 && (
@@ -761,7 +941,7 @@ export default function AccountsPage() {
             )}
           </CardContent>
         </Card>
-      </div>
+      </div >
 
       {/* Add Wallet Modal */}
       <AddAccountModal
@@ -784,25 +964,27 @@ export default function AccountsPage() {
       />
 
       {/* Delete Account Confirmation Modal */}
-      {accountToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAccountToDelete(null)}>
-          <div className="bg-card border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-xl font-semibold mb-4 text-destructive">Delete Wallet</h3>
-            <p className="text-muted-foreground mb-6">
-              Are you sure you want to delete this wallet? This action cannot be undone.
-              All transactions associated with this wallet will also be deleted.
-            </p>
-            <div className="flex gap-3 justify-end">
-              <Button variant="outline" onClick={() => setAccountToDelete(null)}>
-                Cancel
-              </Button>
-              <Button variant="destructive" onClick={() => deleteAccount(accountToDelete)}>
-                Delete
-              </Button>
+      {
+        accountToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={() => setAccountToDelete(null)}>
+            <div className="bg-card border rounded-lg p-6 max-w-md w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <h3 className="text-xl font-semibold mb-4 text-destructive">Delete Wallet</h3>
+              <p className="text-muted-foreground mb-6">
+                Are you sure you want to delete this wallet? This action cannot be undone.
+                All transactions associated with this wallet will also be deleted.
+              </p>
+              <div className="flex gap-3 justify-end">
+                <Button variant="outline" onClick={() => setAccountToDelete(null)}>
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={() => deleteAccount(accountToDelete)}>
+                  Delete
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      }
     </>
   );
 }

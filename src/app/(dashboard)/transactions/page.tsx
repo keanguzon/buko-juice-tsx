@@ -143,14 +143,14 @@ export default function TransactionsPage() {
     filter === "all"
       ? "All"
       : filter === "expense"
-      ? "Expense"
-      : filter === "income"
-      ? "Income"
-      : "Transfer";
+        ? "Expense"
+        : filter === "income"
+          ? "Income"
+          : "Transfer";
 
   return (
     <>
-      <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="space-y-6">
         <div className="space-y-4">
           <div>
             <h2 className="text-3xl font-bold tracking-tight">Transactions</h2>
@@ -158,7 +158,7 @@ export default function TransactionsPage() {
               View and manage your transactions
             </p>
           </div>
-          
+
           {/* Filter and Add buttons - stacked on mobile, inline on desktop */}
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex flex-wrap items-center gap-2">
@@ -198,172 +198,169 @@ export default function TransactionsPage() {
           </div>
         </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Transactions</CardTitle>
-          <CardDescription>Your complete transaction history</CardDescription>
-          <div className="pt-2 text-sm text-muted-foreground">
-            Showing: <span className="font-medium text-foreground">{filterLabel}</span>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {!isLoading && filteredTransactions && filteredTransactions.length > 0 ? (
-            <div className="space-y-4">
-              {filteredTransactions.map((transaction, index) => (
-                <div
-                  key={transaction.id}
-                  className="flex items-center justify-between p-4 rounded-lg border gap-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-md data-transition"
-                  style={{ animationDelay: `${index * 30}ms` }}
-                >
-                  <div 
-                    onClick={() => setSelectedTransaction(transaction)}
-                    className="flex items-center space-x-4 flex-1 min-w-0 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg -m-2 p-2"
+        <Card>
+          <CardHeader>
+            <CardTitle>Transactions</CardTitle>
+            <CardDescription>Your complete transaction history</CardDescription>
+            <div className="pt-2 text-sm text-muted-foreground">
+              Showing: <span className="font-medium text-foreground">{filterLabel}</span>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {!isLoading && filteredTransactions && filteredTransactions.length > 0 ? (
+              <div className="space-y-4">
+                {filteredTransactions.map((transaction, index) => (
+                  <div
+                    key={transaction.id}
+                    className="flex items-center justify-between p-4 rounded-lg border gap-3 transition-all duration-200 hover:scale-[1.01] hover:shadow-md"
                   >
                     <div
-                      className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 ${
-                        transaction.type === "income"
-                          ? "bg-green-500/10"
-                          : transaction.type === "expense"
-                          ? "bg-red-500/10"
-                          : "bg-blue-500/10"
-                      }`}
+                      onClick={() => setSelectedTransaction(transaction)}
+                      className="flex items-center space-x-4 flex-1 min-w-0 cursor-pointer hover:bg-accent/50 transition-colors rounded-lg -m-2 p-2"
                     >
-                      {transaction.type === "income" ? (
-                        <ArrowDownLeft className="h-5 w-5 text-green-500" />
-                      ) : transaction.type === "expense" ? (
-                        <ArrowUpRight className="h-5 w-5 text-red-500" />
-                      ) : (
-                        <ArrowLeftRight className="h-5 w-5 text-blue-500" />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium truncate">
-                        {transaction.description || transaction.category?.name || (transaction.type === "transfer" ? "Transfer" : "Transaction")}
-                      </p>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
-                        <span>{transaction.account?.name}</span>
-                        {transaction.category?.name && (
-                          <>
-                            <span>•</span>
-                            <span>{transaction.category.name}</span>
-                          </>
-                        )}
-                        {transaction.type === "transfer" && (
-                          <>
-                            <span>•</span>
-                            <span>Transfer</span>
-                          </>
+                      <div
+                        className={`p-3 rounded-full transition-all duration-200 flex-shrink-0 ${transaction.type === "income"
+                            ? "bg-green-500/10"
+                            : transaction.type === "expense"
+                              ? "bg-red-500/10"
+                              : "bg-blue-500/10"
+                          }`}
+                      >
+                        {transaction.type === "income" ? (
+                          <ArrowDownLeft className="h-5 w-5 text-green-500" />
+                        ) : transaction.type === "expense" ? (
+                          <ArrowUpRight className="h-5 w-5 text-red-500" />
+                        ) : (
+                          <ArrowLeftRight className="h-5 w-5 text-blue-500" />
                         )}
                       </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">
+                          {transaction.description || transaction.category?.name || (transaction.type === "transfer" ? "Transfer" : "Transaction")}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground truncate">
+                          <span>{transaction.account?.name}</span>
+                          {transaction.category?.name && (
+                            <>
+                              <span>•</span>
+                              <span>{transaction.category.name}</span>
+                            </>
+                          )}
+                          {transaction.type === "transfer" && (
+                            <>
+                              <span>•</span>
+                              <span>Transfer</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p
+                          className={`font-semibold text-sm sm:text-base whitespace-nowrap ${transaction.type === "income"
+                              ? "text-green-500"
+                              : transaction.type === "expense"
+                                ? "text-red-500"
+                                : "text-blue-500"
+                            }`}
+                        >
+                          {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
+                          {formatCurrency(Number(transaction.amount), currency)}
+                        </p>
+                        <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
+                          {formatDate(transaction.date)}
+                        </p>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-semibold text-sm sm:text-base whitespace-nowrap ${
-                          transaction.type === "income"
-                            ? "text-green-500"
-                            : transaction.type === "expense"
-                            ? "text-red-500"
-                            : "text-blue-500"
-                        }`}
+                    <Tooltip content={transaction?.id ? "Delete transaction\nRevert balances" : "Cannot delete this transaction"}>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDeleteConfirm(transaction);
+                        }}
+                        className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700 flex-shrink-0"
+                        title={transaction?.id ? "Delete transaction" : ""}
                       >
-                        {transaction.type === "income" ? "+" : transaction.type === "expense" ? "-" : ""}
-                        {formatCurrency(Number(transaction.amount), currency)}
-                      </p>
-                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-nowrap">
-                        {formatDate(transaction.date)}
-                      </p>
-                    </div>
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </Tooltip>
                   </div>
-                  <Tooltip content={transaction?.id ? "Delete transaction\nRevert balances" : "Cannot delete this transaction"}>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDeleteConfirm(transaction);
-                      }}
-                      className="p-2 hover:bg-red-100 dark:hover:bg-red-950 rounded-lg transition-colors text-red-500 hover:text-red-700 flex-shrink-0"
-                      title={transaction?.id ? "Delete transaction" : ""}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </Tooltip>
-                </div>
-              ))}
-            </div>
-          ) : !isLoading ? (
-            <div className="flex flex-col items-center justify-center py-12">
-              <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
-              <p className="text-lg font-medium">No transactions found</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Try changing the filter or add a transaction
-              </p>
-              <Button onClick={() => setIsModalOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Add Transaction
-              </Button>
-            </div>
-          ) : (
-            <TableSkeleton rows={8} />
-          )}
-        </CardContent>
-      </Card>
-    </div>
+                ))}
+              </div>
+            ) : !isLoading ? (
+              <div className="flex flex-col items-center justify-center py-12">
+                <ArrowLeftRight className="h-12 w-12 text-muted-foreground/50 mb-4" />
+                <p className="text-lg font-medium">No transactions found</p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Try changing the filter or add a transaction
+                </p>
+                <Button onClick={() => setIsModalOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Transaction
+                </Button>
+              </div>
+            ) : (
+              <TableSkeleton rows={8} />
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-    {/* Delete Confirmation Modal */}
-    {deleteConfirm && (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
-        onClick={() => setDeleteConfirm(null)}
-      >
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm && (
         <div
-          className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
-          onClick={(e) => e.stopPropagation()}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-in fade-in duration-200"
+          onClick={() => setDeleteConfirm(null)}
         >
-          <div className="p-6">
-            <h3 className="text-xl font-semibold mb-2 text-red-500">Delete Transaction?</h3>
-            <p className="text-muted-foreground mb-6">
-              This will remove the transaction and revert the balance. This action cannot be undone.
-            </p>
-            <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg mb-6 text-sm">
-              <p className="font-medium">{deleteConfirm.description || deleteConfirm.category?.name || "Transaction"}</p>
-              <p className="text-muted-foreground">{formatCurrency(Number(deleteConfirm.amount), currency)} • {formatDate(deleteConfirm.date)}</p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setDeleteConfirm(null)}
-                className="flex-1 px-4 py-2 border rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => deleteTransaction(deleteConfirm)}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
-              >
-                {isDeleting ? "Deleting..." : "Delete"}
-              </button>
+          <div
+            className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-xl animate-in slide-in-from-bottom-4 duration-300 m-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="p-6">
+              <h3 className="text-xl font-semibold mb-2 text-red-500">Delete Transaction?</h3>
+              <p className="text-muted-foreground mb-6">
+                This will remove the transaction and revert the balance. This action cannot be undone.
+              </p>
+              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded-lg mb-6 text-sm">
+                <p className="font-medium">{deleteConfirm.description || deleteConfirm.category?.name || "Transaction"}</p>
+                <p className="text-muted-foreground">{formatCurrency(Number(deleteConfirm.amount), currency)} • {formatDate(deleteConfirm.date)}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="flex-1 px-4 py-2 border rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => deleteTransaction(deleteConfirm)}
+                  disabled={isDeleting}
+                  className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 transition-colors"
+                >
+                  {isDeleting ? "Deleting..." : "Delete"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-    )}
+      )}
 
-    {/* Add Transaction Modal */}
-    <AddTransactionModal
-      isOpen={isModalOpen}
-      onClose={() => {
-        setIsModalOpen(false);
-        setRefreshKey(prev => prev + 1);
-      }}
-    />
+      {/* Add Transaction Modal */}
+      <AddTransactionModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setRefreshKey(prev => prev + 1);
+        }}
+      />
 
-    {/* Transaction Detail Preview Modal */}
-    <TransactionDetailModal
-      isOpen={!!selectedTransaction}
-      transaction={selectedTransaction}
-      currency={currency}
-      onClose={() => setSelectedTransaction(null)}
-      onRequestDelete={(tx) => setDeleteConfirm(tx)}
-    />
-  </>
+      {/* Transaction Detail Preview Modal */}
+      <TransactionDetailModal
+        isOpen={!!selectedTransaction}
+        transaction={selectedTransaction}
+        currency={currency}
+        onClose={() => setSelectedTransaction(null)}
+        onRequestDelete={(tx) => setDeleteConfirm(tx)}
+      />
+    </>
   );
 }

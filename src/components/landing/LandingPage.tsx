@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/ui/mode-toggle";
+import { ThemeToggle } from "@/components/theme/ThemeToggle";
 import { ScrollReveal } from "./ScrollReveal";
 import {
   ArrowRight,
@@ -32,7 +32,7 @@ export function LandingPage() {
   }, []);
 
   return (
-    <div className="flex min-h-screen flex-col bg-background overflow-x-hidden">
+    <div className="flex min-h-screen flex-col bg-background">
       {/* ─── Animated Background (video-like moving blobs) ─── */}
       <div className="landing-bg-animation">
         <div className="landing-bg-blob landing-bg-blob-1" />
@@ -48,7 +48,7 @@ export function LandingPage() {
       <header
         className={`fixed top-0 z-50 w-full transition-all duration-300 ${
           scrolled
-            ? "bg-background/80 backdrop-blur-xl border-b shadow-sm"
+            ? "bg-background/80 backdrop-blur-xl shadow-sm"
             : "bg-transparent"
         }`}
       >
@@ -66,7 +66,7 @@ export function LandingPage() {
             </span>
           </Link>
           <nav className="flex items-center gap-2 sm:gap-4">
-            <ModeToggle />
+            <ThemeToggle />
             <Link href="/login" className="hidden sm:inline">
               <Button variant="ghost" size="sm" className="text-sm">
                 Sign In
@@ -97,22 +97,21 @@ export function LandingPage() {
             <ScrollReveal delay={0} duration={600}>
               <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm text-primary backdrop-blur-sm">
                 <Zap className="h-3.5 w-3.5" />
-                <span>Your personal finance companion</span>
+                <span>Money tracking made simple</span>
               </div>
             </ScrollReveal>
 
             {/* Heading */}
             <ScrollReveal delay={100} duration={800}>
               <h1 className="text-4xl font-bold tracking-tight sm:text-6xl md:text-7xl lg:text-8xl">
-                Ship your finances{" "}
-                <span className="landing-gradient-text">faster</span>
+                Track your{" "}
+                <span className="landing-gradient-text">money</span>
               </h1>
             </ScrollReveal>
 
             <ScrollReveal delay={200} duration={800}>
               <p className="max-w-2xl text-lg text-muted-foreground sm:text-xl leading-relaxed">
-                Track expenses, manage multiple accounts, and gain insights into
-                your spending — all in one beautifully simple app.
+                See where your money goes. Manage all your financial wallets in one place.
               </p>
             </ScrollReveal>
 
@@ -200,11 +199,11 @@ export function LandingPage() {
             <ScrollReveal>
               <div className="mx-auto max-w-2xl text-center mb-16">
                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Everything you need to{" "}
-                  <span className="landing-gradient-text">manage money</span>
+                  Simple tools for{" "}
+                  <span className="landing-gradient-text">your money</span>
                 </h2>
                 <p className="mt-4 text-muted-foreground text-lg">
-                  Powerful features packed in a simple, fast interface.
+                  Everything you need, nothing you don't.
                 </p>
               </div>
             </ScrollReveal>
@@ -213,33 +212,33 @@ export function LandingPage() {
               {[
                 {
                   icon: Wallet,
-                  title: "Multiple Accounts",
-                  desc: "Track cash, bank accounts, credit cards, and e-wallets — all in one place.",
+                  title: "Multiple Wallets",
+                  desc: "Cash, bank accounts, credit cards, and e-wallets in one place.",
                 },
                 {
                   icon: BarChart3,
                   title: "Visual Reports",
-                  desc: "Understand your spending with beautiful, interactive charts and insights.",
+                  desc: "Charts and graphs that help you understand your spending.",
                 },
                 {
                   icon: Shield,
                   title: "Secure & Private",
-                  desc: "Your data is encrypted end-to-end and never shared with third parties.",
+                  desc: "Your data is encrypted and never shared.",
                 },
                 {
                   icon: Target,
                   title: "Budget Goals",
-                  desc: "Set spending limits per category and get alerts before you overspend.",
+                  desc: "Set spending limits and track your progress.",
                 },
                 {
                   icon: TrendingUp,
-                  title: "Trend Analysis",
-                  desc: "See how your finances evolve over weeks, months, and years.",
+                  title: "Trends Over Time",
+                  desc: "See how your money moves over weeks and months.",
                 },
                 {
                   icon: Smartphone,
                   title: "Works Everywhere",
-                  desc: "Responsive design that adapts perfectly to any screen size.",
+                  desc: "Use it on your phone, tablet, or computer.",
                 },
               ].map((feature, i) => (
                 <ScrollReveal key={i} delay={i * 80} duration={600}>
@@ -259,7 +258,7 @@ export function LandingPage() {
           </div>
         </section>
 
-        {/* ─── Highlight: Accounts ─── */}
+        {/* ─── Highlight: Financial Wallets ─── */}
         <section className="relative py-24 md:py-32 overflow-hidden">
           <div className="absolute inset-0 landing-grid-bg opacity-50" />
           <div className="container relative mx-auto px-4 md:px-8">
@@ -268,16 +267,15 @@ export function LandingPage() {
                 <div>
                   <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-3 py-1 text-xs text-primary mb-4">
                     <Landmark className="h-3 w-3" />
-                    Accounts
+                    Financial Wallets
                   </div>
                   <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                    All your accounts.{" "}
-                    <span className="landing-gradient-text">One dashboard.</span>
+                    All your wallets.{" "}
+                    <span className="landing-gradient-text">One place.</span>
                   </h2>
                   <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-                    Cash, savings, checking, credit cards, and e-wallets — see
-                    every peso at a glance. Transfer tracking between accounts
-                    keeps your records perfectly balanced.
+                    See all your money at once. Track transfers between wallets.
+                    Keep everything balanced.
                   </p>
                   <div className="mt-8 flex gap-4">
                     <Link href="/register">
@@ -354,13 +352,12 @@ export function LandingPage() {
                     Security
                   </div>
                   <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                    Bank-grade security.{" "}
-                    <span className="landing-gradient-text">Included free.</span>
+                    Your data is{" "}
+                    <span className="landing-gradient-text">safe.</span>
                   </h2>
                   <p className="mt-4 text-muted-foreground text-lg leading-relaxed">
-                    Your financial data lives in your own secure account, 
-                    encrypted at rest and in transit. We never sell, share, or
-                    peek at your numbers.
+                    Your information is encrypted and stored securely. We never
+                    share or sell your data.
                   </p>
                 </div>
               </ScrollReveal>
@@ -377,11 +374,11 @@ export function LandingPage() {
             <ScrollReveal>
               <div className="mx-auto max-w-2xl text-center mb-16">
                 <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                  Built for scale.{" "}
-                  <span className="landing-gradient-text">And for you.</span>
+                  Free to use.{" "}
+                  <span className="landing-gradient-text">No limits.</span>
                 </h2>
                 <p className="mt-4 text-muted-foreground text-lg">
-                  Whether you track every centavo or just the big picture — we&apos;ve got you.
+                  Track as much or as little as you want.
                 </p>
               </div>
             </ScrollReveal>
@@ -416,11 +413,10 @@ export function LandingPage() {
                 <div className="absolute inset-0 landing-cta-gradient" />
                 <div className="relative px-8 py-16 sm:px-16 sm:py-20 text-center">
                   <h2 className="text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
-                    Ready to take control?
+                    Start tracking today
                   </h2>
                   <p className="mt-4 text-muted-foreground text-lg max-w-xl mx-auto">
-                    Join Buko Juice today and start managing your finances with
-                    clarity and confidence. Completely free.
+                    Create your free account and see where your money goes.
                   </p>
                   <div className="mt-8 flex flex-wrap justify-center gap-4">
                     <Link href="/register">

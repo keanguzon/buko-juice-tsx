@@ -72,6 +72,11 @@
     @apply bg-background text-foreground;
   }
 
+  /* Fix for Radix UI scroll locking with scrollbar-gutter */
+  body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
+
   /* Smooth color transitions for theme switching - prevent flickering */
   /* Only apply the hard sync during an actual theme change.
      This avoids permanently overriding hover/width/transform animations. */
@@ -79,9 +84,9 @@
   html.theme-transitioning *::before,
   html.theme-transitioning *::after {
     transition: background-color 150ms ease,
-                border-color 150ms ease,
-                fill 150ms ease,
-                stroke 150ms ease !important;
+      border-color 150ms ease,
+      fill 150ms ease,
+      stroke 150ms ease !important;
   }
 
   /* Text elements: keep color instant (no flicker), but sync bg/borders */
@@ -99,12 +104,13 @@
   html.theme-transitioning label,
   html.theme-transitioning div {
     transition: background-color 150ms ease,
-                border-color 150ms ease !important;
+      border-color 150ms ease !important;
   }
 }
 
 /* Unified Animation Classes */
 @layer utilities {
+
   /* Page Transitions */
   .animate-page-enter {
     animation: fadeIn var(--animation-duration-slow) var(--animation-ease-out);
@@ -127,13 +133,13 @@
   }
 
   /* ─── MICRO-INTERACTIONS ─── */
-  
+
   /* Input focus glow */
   input:focus,
   textarea:focus,
   select:focus {
     outline: none;
-    box-shadow: 
+    box-shadow:
       0 0 0 2px hsl(var(--background)),
       0 0 0 4px hsl(var(--primary) / 0.3),
       0 0 20px hsl(var(--primary) / 0.2);
@@ -196,23 +202,19 @@
 
   /* Skeleton Loading */
   .skeleton {
-    background: linear-gradient(
-      90deg,
-      rgba(255, 255, 255, 0) 0%,
-      rgba(255, 255, 255, 0.2) 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(90deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.2) 50%,
+        rgba(255, 255, 255, 0) 100%);
     background-size: 200% 100%;
     animation: shimmer 2s infinite;
   }
 
   .dark .skeleton {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted) / 0.8) 50%,
-      hsl(var(--muted)) 100%
-    );
+    background: linear-gradient(90deg,
+        hsl(var(--muted)) 0%,
+        hsl(var(--muted) / 0.8) 50%,
+        hsl(var(--muted)) 100%);
     background-size: 200% 100%;
   }
 
@@ -222,6 +224,7 @@
       opacity: 0;
       transform: translateY(10px);
     }
+
     to {
       opacity: 1;
       transform: translateY(0);
@@ -238,6 +241,7 @@
       opacity: 0;
       transform: scale(0.95);
     }
+
     to {
       opacity: 1;
       transform: scale(1);
@@ -275,9 +279,11 @@
   0% {
     opacity: 0;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0;
   }
@@ -287,6 +293,7 @@
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
@@ -297,6 +304,7 @@
     opacity: 0;
     transform: translateX(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -308,6 +316,7 @@
     opacity: 0;
     transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -318,6 +327,7 @@
   0% {
     background-position: -200% 0;
   }
+
   100% {
     background-position: 200% 0;
   }
@@ -330,10 +340,13 @@
 }
 
 @keyframes bounce {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(-5%);
     animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
   }
+
   50% {
     transform: translateY(0);
     animation-timing-function: cubic-bezier(0, 0, 0.2, 1);

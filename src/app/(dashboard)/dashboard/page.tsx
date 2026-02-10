@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,17 @@ import {
   Wallet,
   ArrowLeftRight,
   ArrowRight,
+  ChevronDown,
 } from "lucide-react";
 import Link from "next/link";
 import { StatCardSkeleton } from "@/components/ui/skeleton";
 import { CountUpNumber } from "@/components/ui/count-up";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 export default function DashboardPage() {
   const supabase = createClient();
@@ -23,8 +30,53 @@ export default function DashboardPage() {
   const [transactions, setTransactions] = useState<any[]>([]);
   const [monthlyIncome, setMonthlyIncome] = useState(0);
   const [monthlyExpenses, setMonthlyExpenses] = useState(0);
+  const [lastMonthIncome, setLastMonthIncome] = useState(0);
+  const [lastMonthExpenses, setLastMonthExpenses] = useState(0);
+  const [lastMonthBalance, setLastMonthBalance] = useState(0);
   const [currency, setCurrency] = useState("PHP");
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState<"last7" | "last30" | "thisMonth">("thisMonth");
+
+  const rangeLabel = useMemo(() => {
+    if (dateRange === "last7") return "Last 7 days";
+    if (dateRange === "last30") return "Last 30 days";
+    return "This month";
+  }, [dateRange]);
+
+  const getDateRange = (range: "last7" | "last30" | "thisMonth") => {
+    const toDateString = (date: Date) => date.toISOString().split("T")[0];
+    const today = new Date();
+    const end = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    if (range === "thisMonth") {
+      const currentStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const previousStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+      const previousEnd = new Date(today.getFullYear(), today.getMonth(), 0);
+      return {
+        currentStart: toDateString(currentStart),
+        currentEnd: toDateString(end),
+        previousStart: toDateString(previousStart),
+        previousEnd: toDateString(previousEnd),
+      };
+    }
+
+    const days = range === "last7" ? 7 : 30;
+    const currentStart = new Date(end);
+    currentStart.setDate(currentStart.getDate() - (days - 1));
+
+    const previousEnd = new Date(currentStart);
+    previousEnd.setDate(previousEnd.getDate() - 1);
+
+    const previousStart = new Date(previousEnd);
+    previousStart.setDate(previousStart.getDate() - (days - 1));
+
+    return {
+      currentStart: toDateString(currentStart),
+      currentEnd: toDateString(end),
+      previousStart: toDateString(previousStart),
+      previousEnd: toDateString(previousEnd),
+    };
+  };
 
   useEffect(() => {
     const loadData = async () => {
@@ -66,16 +118,24 @@ export default function DashboardPage() {
           setTransactions(transactionsData ?? []);
         }
 
-        // This month's income/expenses
-        const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+        const { currentStart, currentEnd, previousStart, previousEnd } = getDateRange(dateRange);
+
         const { data: monthTransactionsData } = await supabase
           .from("transactions")
           .select("type, amount, account_id, transfer_to_account_id")
           .eq("user_id", user.id)
-          .gte("date", startOfMonth);
+          .gte("date", currentStart)
+          .lte("date", currentEnd);
+
+        const { data: lastMonthTransactionsData } = await supabase
+          .from("transactions")
+          .select("type, amount, account_id, transfer_to_account_id")
+          .eq("user_id", user.id)
+          .gte("date", previousStart)
+          .lte("date", previousEnd);
 
         const monthTransactions = (monthTransactionsData ?? []) as any[];
+        const lastMonthTransactions = (lastMonthTransactionsData ?? []) as any[];
         const accountTypeById = new Map<string, string>();
         (accountsData || []).forEach((a: any) => {
           if (a?.id) accountTypeById.set(a.id, a.type);
@@ -106,19 +166,57 @@ export default function DashboardPage() {
           )
           .reduce((sum, t) => sum + Number(t.amount), 0);
 
+        const lastIncome = lastMonthTransactions
+          .filter((t) => t.type === "income" && !isCredit(t.account_id))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const lastExpenses = lastMonthTransactions
+          .filter((t) => t.type === "expense" && !isCredit(t.account_id))
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
+        const lastDebtPayments = lastMonthTransactions
+          .filter(
+            (t) =>
+              t.type === "transfer" &&
+              !isCredit(t.account_id) &&
+              isCredit(t.transfer_to_account_id)
+          )
+          .reduce((sum, t) => sum + Number(t.amount), 0);
+
         setMonthlyIncome(income || 0);
         setMonthlyExpenses((expenses + debtPayments) || 0);
+        setLastMonthIncome(lastIncome || 0);
+        setLastMonthExpenses((lastExpenses + lastDebtPayments) || 0);
+        
+        // Calculate last month's balance (current balance minus this month's net change)
+        const thisMonthNet = income - (expenses + debtPayments);
+        setLastMonthBalance(currentMoney - thisMonthNet);
       }
       setLoading(false);
     };
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [dateRange]);
 
   const networthAccounts = accounts.filter(
     (a: any) => a?.type !== "credit_card" && a?.include_in_networth !== false
   );
   const currentMoney = networthAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0) || 0;
+  
+  // Calculate percentage changes
+  const calculatePercentChange = (current: number, previous: number) => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / Math.abs(previous)) * 100;
+  };
+
+  const balanceChange = calculatePercentChange(currentMoney, lastMonthBalance);
+  const incomeChange = calculatePercentChange(monthlyIncome, lastMonthIncome);
+  const expenseChange = calculatePercentChange(monthlyExpenses, lastMonthExpenses);
+  const savingsChange = calculatePercentChange(
+    monthlyIncome - monthlyExpenses,
+    lastMonthIncome - lastMonthExpenses
+  );
+
   const statCards = [
     {
       title: "Total Balance",
@@ -126,27 +224,31 @@ export default function DashboardPage() {
       icon: Wallet,
       description: `Across ${networthAccounts.length || 0} accounts (excluding debt)`,
       color: "text-primary",
+      change: balanceChange,
     },
     {
       title: "Income",
       value: formatCurrency(monthlyIncome, currency),
       icon: ArrowDownLeft,
-      description: "This month",
+      description: rangeLabel,
       color: "text-green-500",
+      change: incomeChange,
     },
     {
       title: "Expenses",
       value: formatCurrency(monthlyExpenses, currency),
       icon: ArrowUpRight,
-      description: "This month",
+      description: rangeLabel,
       color: "text-red-500",
+      change: expenseChange,
     },
     {
       title: "Net Savings",
       value: formatCurrency(monthlyIncome - monthlyExpenses, currency),
       icon: TrendingUp,
-      description: "This month",
+      description: rangeLabel,
       color: monthlyIncome - monthlyExpenses >= 0 ? "text-green-500" : "text-red-500",
+      change: savingsChange,
     },
   ];
 
@@ -171,11 +273,29 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-        <p className="text-muted-foreground">
-          Your financial overview at a glance.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground">
+            Your financial overview at a glance.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted-foreground">Range</span>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" className="w-[140px] justify-between">
+                {rangeLabel}
+                <ChevronDown className="ml-2 h-4 w-4 shrink-0" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-40">
+              <DropdownMenuItem onClick={() => setDateRange("last7")}>Last 7 days</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDateRange("last30")}>Last 30 days</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDateRange("thisMonth")}>This month</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       {/* Stats Grid */}
@@ -194,7 +314,12 @@ export default function DashboardPage() {
               <div className={`text-2xl font-bold data-transition ${stat.color}`}>
                 {stat.value}
               </div>
-              <p className="text-xs text-muted-foreground">{stat.description}</p>
+              <p className={`text-xs font-medium mt-1 ${
+                stat.change >= 0 ? 'text-green-500' : 'text-red-500'
+              }`}>
+                {stat.change >= 0 ? '+' : ''}{stat.change.toFixed(1)}%
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">{stat.description}</p>
             </CardContent>
           </Card>
         ))}
